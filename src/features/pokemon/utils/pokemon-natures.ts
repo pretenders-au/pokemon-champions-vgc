@@ -49,6 +49,34 @@ const NATURE_STATS_MAP: Record<string, { boosted: string; hindered: string }> = 
   Naive: { boosted: "SPE", hindered: "SPD" },
 };
 
+/** The five stats a nature can modify. HP is never affected. */
+export type NatureStat = 'atk' | 'def' | 'spa' | 'spd' | 'spe';
+
+const BY_BARE_NAME = new Map(
+  Object.entries(NATURE_STATS_MAP).map(([name, stats]) => [name.toLowerCase(), stats])
+);
+
+/**
+ * The bare name, as @smogon/calc and Showdown spell it — `NATURES` carries a decorated
+ * display form ("Adamant (+ATK, -SPA)").
+ */
+export const bareNature = (nature: string | null | undefined): string =>
+  (nature ?? '').split(' (')[0].trim();
+
+/**
+ * The multiplier a nature applies to one stat. The single source of truth: the stat
+ * display and the damage engine both read this, so they cannot disagree.
+ *
+ * A nature is a boost+hinder PAIR. Anything that isn't a real nature — an empty string,
+ * an unknown name, or one of the five neutral natures — is 1.0 across the board.
+ */
+export const natureMultiplier = (nature: string | null | undefined, stat: string): number => {
+  const entry = BY_BARE_NAME.get(bareNature(nature).toLowerCase());
+  if (!entry) return 1.0;
+  const s = stat.toUpperCase();
+  return entry.boosted === s ? 1.1 : entry.hindered === s ? 0.9 : 1.0;
+};
+
 export const getNatureStats = (nature: string): { boostedStat: string | null; hinderedStat: string | null } => {
   if (!nature) return { boostedStat: null, hinderedStat: null };
   const realNature = nature.split(' (')[0].trim().toLowerCase();
@@ -90,6 +118,25 @@ export const natureForStatWheel = (stat: string, target: number): string => {
   const boosted = target === 2 ? stat : target === 0 ? partner : null;
   const hindered = target === 2 ? partner : target === 0 ? stat : null;
   return getNatureFromStats(boosted, hindered);
+};
+
+/**
+ * Apply one `+`/`-` press to a nature and return the nature that results.
+ *
+ * A nature is a boost+hinder PAIR, so a press that would leave only one half fills the
+ * other with the conventional dump stat (Atk, or SpA when tuning Atk) — the same rule
+ * `natureForStatWheel` uses. Pressing the stat that is already set returns to neutral.
+ */
+export const toggleNature = (nature: string, stat: string, mod: '+' | '-'): string => {
+  const { boostedStat: boost, hinderedStat: hinder } = getNatureStats(nature);
+  const partner = stat === 'atk' ? 'spa' : 'atk';
+
+  if (mod === '+') {
+    if (boost === stat) return 'Hardy';
+    return getNatureFromStats(stat, hinder && hinder !== stat ? hinder : partner);
+  }
+  if (hinder === stat) return 'Hardy';
+  return getNatureFromStats(boost && boost !== stat ? boost : partner, stat);
 };
 
 export const getFormattedNature = (nature: string): string => {

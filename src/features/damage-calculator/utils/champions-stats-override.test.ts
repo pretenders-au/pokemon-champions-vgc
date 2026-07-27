@@ -8,7 +8,7 @@ const stateFor = (overrides: Record<string, unknown> = {}) => ({
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   stages: {},
-  boostedStat: null, hinderedStat: null,
+  boostedStat: null, hinderedStat: null, nature: 'Hardy',
   hpPercent: 100,
   activeAbility: null, item: null,
   isReflect: false, isLightScreen: false, isAuroraVeil: false,
@@ -27,7 +27,7 @@ describe('mapToSmogonPokemon Champions stat override', () => {
   })
 
   it('applies nature to the overridden stat', () => {
-    const p = mapToSmogonPokemon(stateFor({ boostedStat: 'atk', hinderedStat: 'spa' }), 'Garchomp', 'dragon', 'ground')
+    const p = mapToSmogonPokemon(stateFor({ nature: 'Adamant (+ATK, -SPA)' }), 'Garchomp', 'dragon', 'ground')
     expect(p.rawStats.atk).toBe(championsStat(100, 0, 1.1)) // 132
     expect(p.rawStats.spa).toBe(championsStat(100, 0, 0.9)) // 108
   })

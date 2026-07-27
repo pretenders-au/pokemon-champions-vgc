@@ -58,7 +58,7 @@ export function ArenaCalculator({
   const speed = buildSpeedCompare(
     {
       baseSpe: state[dir].baseSpe, spSpe: state[dir].spSpe,
-      boostedStat: state[dir].boostedStat, hinderedStat: state[dir].hinderedStat,
+      nature: state[dir].nature,
       speStage: state[dir].stages.spe || 0, item: state[dir].item, isTailwind: state[dir].isTailwind,
     },
     { baseSpe: state[defDir].baseSpe, speStage: state[defDir].stages.spe || 0, isTailwind: state[defDir].isTailwind },

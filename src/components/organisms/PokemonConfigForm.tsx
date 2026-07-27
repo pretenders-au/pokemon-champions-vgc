@@ -218,8 +218,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
             spd: { base: config.baseSpd, sp: config.spSpd },
             spe: { base: config.baseSpe, sp: config.spSpe },
           }}
-          boostedStat={config.boostedStat}
-          hinderedStat={config.hinderedStat}
+          nature={config.nature}
           onToggleNature={onToggleNature}
           onSpChange={onSpChange}
           onStageChange={onStageChange}

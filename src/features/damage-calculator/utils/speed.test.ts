@@ -11,7 +11,7 @@ describe('effectiveSpeed', () => {
 
 describe('buildSpeedCompare', () => {
   // You: Flutter Mane, base 135 Spe, 32 SP, +Spe nature → floor((135+20+32)*1.1) = 205
-  const you = { baseSpe: 135, spSpe: 32, boostedStat: 'spe', hinderedStat: 'atk', speStage: 0, item: null, isTailwind: false };
+  const you = { baseSpe: 135, spSpe: 32, nature: 'Timid (+SPE, -ATK)', speStage: 0, item: null, isTailwind: false };
   // Opp: Dragapult, base 142 → tiers: Max+ 213, Max 194, Uninvested 162
   const opp = { baseSpe: 142, speStage: 0, isTailwind: false };
 

@@ -1,7 +1,7 @@
 import { useReducer } from 'react';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { getNatureStats, getNatureFromStats, getFormattedNature, toggleNature } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
@@ -181,27 +181,9 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
     }
     case 'TOGGLE_NATURE': {
       const { stat, mod } = action.payload;
-      let newBoosted = state.boostedStat;
-      let newHindered = state.hinderedStat;
-
-      if (mod === '+') {
-        if (newBoosted === stat) {
-          newBoosted = null;
-        } else {
-          newBoosted = stat;
-          if (newHindered === stat) newHindered = null;
-        }
-      } else {
-        if (newHindered === stat) {
-          newHindered = null;
-        } else {
-          newHindered = stat;
-          if (newBoosted === stat) newBoosted = null;
-        }
-      }
-
-      const newNature = getNatureFromStats(newBoosted, newHindered);
-      return { ...state, boostedStat: newBoosted, hinderedStat: newHindered, nature: newNature };
+      const nature = toggleNature(state.nature, stat, mod);
+      const { boostedStat, hinderedStat } = getNatureStats(nature);
+      return { ...state, boostedStat, hinderedStat, nature };
     }
     case 'SET_STAT_STAGE': {
       const { stat, val } = action.payload;

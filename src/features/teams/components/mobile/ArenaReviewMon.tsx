@@ -6,7 +6,7 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
 import { convertSpToEv } from '@/features/pokemon/utils/sp-ev-converter';
-import { getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
+import { getNatureFromStats, getNatureStats, natureMultiplier, natureForStatWheel } from '@/features/pokemon/utils/pokemon-natures';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
@@ -146,19 +146,23 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
     const cappedVal = Math.min(targetVal, maxAllowed);
     setSp((prev) => ({ ...prev, [spKey]: cappedVal }));
   };
-  const natMult = (key: string) => (up === key ? 1.1 : down === key ? 0.9 : 1.0);
+  // A lone boost is not a nature: read the multiplier off the nature these two resolve to,
+  // so the displayed stat matches what the damage engine will compute.
+  const natMult = (key: string) => natureMultiplier(getNatureFromStats(up, down), key);
   const valueFor = (key: string, baseKey: keyof PokemonConfig, spKey: keyof PokemonConfig) => {
     const base = c[baseKey] as number;
     return key === 'hp' ? championsHP(base, sp[spKey as string]) : championsStat(base, sp[spKey as string], natMult(key));
   };
+  // One button per stat, cycling neutral -> boost -> hinder -> neutral. Each position is a
+  // real nature: natureForStatWheel pairs the tuned stat with the conventional dump stat,
+  // so the button can never leave a half-set nature behind.
   const cycleNature = (key: string) => {
     if (key === 'hp') return;
-    const role = up === key ? 'up' : down === key ? 'down' : 'none';
-    if (role === 'up') { setUp(null); return; }
-    if (role === 'down') { setDown(null); return; }
-    if (up && !down) { setDown(key); return; }
-    if (down && !up) { setUp(key); return; }
-    if (!up && !down) setUp(key);
+    const current = up === key ? 2 : down === key ? 0 : 1;
+    const next = current === 1 ? 2 : current === 2 ? 0 : 1;
+    const { boostedStat, hinderedStat } = getNatureStats(natureForStatWheel(key, next));
+    setUp(boostedStat);
+    setDown(hinderedStat);
   };
 
   const buildConfig = (): PokemonConfig => ({

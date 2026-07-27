@@ -1,3 +1,4 @@
+import { natureMultiplier } from '@/features/pokemon/utils/pokemon-natures';
 import { calculateStat, getStageMultiplier } from './damage-calc';
 import { calculateSpeedStats } from '@/features/pokemon/utils/stats';
 import type { SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
@@ -24,7 +25,7 @@ export function fmtStage(n: number): string {
 
 /** Live speed formula string shown under the speed comparison. */
 export function speedFormula(s: SideState): string {
-  const mult = s.boostedStat === 'spe' ? 1.1 : s.hinderedStat === 'spe' ? 0.9 : 1.0;
+  const mult = natureMultiplier(s.nature, 'spe');
   const val = Math.floor((s.baseSpe + 20 + s.spSpe) * mult);
   return `${val} = floor((${s.baseSpe} + 20 + ${s.spSpe}) × ${mult.toFixed(1)})`;
 }
@@ -32,14 +33,11 @@ export function speedFormula(s: SideState): string {
 export interface SpeedTierRow { label: string; value: number; outcome: 'faster' | 'tie' | 'outsped' }
 export interface SpeedCompare { yours: { actual: number; scarf: number; tailwind: number }; tiers: SpeedTierRow[] }
 
-const speNatureMult = (boosted: string | null, hindered: string | null): number =>
-  boosted === 'spe' ? 1.1 : hindered === 'spe' ? 0.9 : 1.0;
-
 export function buildSpeedCompare(
-  you: { baseSpe: number; spSpe: number; boostedStat: string | null; hinderedStat: string | null; speStage: number; item: string | null; isTailwind: boolean },
+  you: { baseSpe: number; spSpe: number; nature: string; speStage: number; item: string | null; isTailwind: boolean },
   opp: { baseSpe: number; speStage: number; isTailwind: boolean },
 ): SpeedCompare {
-  const clean = calculateStat(you.baseSpe, you.spSpe, speNatureMult(you.boostedStat, you.hinderedStat), you.speStage);
+  const clean = calculateStat(you.baseSpe, you.spSpe, natureMultiplier(you.nature, 'spe'), you.speStage);
   const scarfed = you.item === 'Choice Scarf';
   const actual = effectiveSpeed(clean, { scarf: scarfed, tailwind: you.isTailwind });
   const yours = {

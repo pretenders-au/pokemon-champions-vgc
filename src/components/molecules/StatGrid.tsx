@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { calculateHP, calculateStat, getStatModifier } from '@/features/damage-calculator/utils/damage-calc';
 import { convertSpToEv, convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
+import { natureMultiplier } from '@/features/pokemon/utils/pokemon-natures';
 
 interface StatRowProps {
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe';
@@ -9,8 +10,7 @@ interface StatRowProps {
   sp: number;
   onSpChange: (val: number) => void;
   isHp?: boolean;
-  boostedStat?: string | null;
-  hinderedStat?: string | null;
+  nature: string;
   onToggleNature?: (stat: string, mod: '+' | '-') => void;
   stage?: number;
   onStageChange?: (stat: string, val: number) => void;
@@ -24,14 +24,14 @@ interface StatRowProps {
 
 const StatRow: React.FC<StatRowProps> = ({ 
   statKey, label, base, sp, onSpChange, 
-  isHp = false, boostedStat, hinderedStat, onToggleNature,
+  isHp = false, nature, onToggleNature,
   stage = 0, onStageChange,
   ability = null, weather = 'None', pokemonTypes = [], role = 'attacker',
   hpPercent = 100, isEvMode = false
 }) => {
-  const isBoosted = boostedStat === statKey;
-  const isHindered = hinderedStat === statKey;
-  const multiplier = isBoosted ? 1.1 : isHindered ? 0.9 : 1.0;
+  const multiplier = natureMultiplier(nature, statKey);
+  const isBoosted = multiplier > 1;
+  const isHindered = multiplier < 1;
   
   const abilityResult = isHp ? { modifier: 1.0, triggered: false } : getStatModifier(ability, statKey, role, pokemonTypes, weather, hpPercent);
   const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityResult.modifier);
@@ -141,8 +141,7 @@ interface StatGridProps {
     spd: { base: number; sp: number };
     spe: { base: number; sp: number };
   };
-  boostedStat: string | null;
-  hinderedStat: string | null;
+  nature: string;
   stages?: Record<string, number>;
   onSpChange: (key: string, val: number) => void;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
@@ -158,7 +157,7 @@ interface StatGridProps {
 }
 
 const StatGrid: React.FC<StatGridProps> = ({ 
-  stats, boostedStat, hinderedStat, stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, onSpChange, onToggleNature, onStageChange, 
+  stats, nature, stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, onSpChange, onToggleNature, onStageChange, 
   ability, weather, pokemonTypes, role, hpPercent, enforceSpLimit = false, onResetStats, className = '' 
 }) => {
   const [isEvMode, setIsEvMode] = useState(false);
@@ -185,7 +184,7 @@ const StatGrid: React.FC<StatGridProps> = ({
   };
 
   const rowBaseProps = {
-    boostedStat, hinderedStat, onToggleNature, onStageChange,
+    nature, onToggleNature, onStageChange,
     ability, weather, pokemonTypes, role, hpPercent, isEvMode
   };
 

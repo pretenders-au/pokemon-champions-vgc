@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { getNatureStats, getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
+import { getNatureStats, getNatureFromStats, toggleNature } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface StatState {
   boostedStat: string | null;
@@ -14,27 +14,9 @@ export const useStatEngine = () => {
     stat: string,
     mod: '+' | '-'
   ): StatState => {
-    let newBoosted = currentBoosted;
-    let newHindered = currentHindered;
-
-    if (mod === '+') {
-      if (newBoosted === stat) {
-        newBoosted = null;
-      } else {
-        newBoosted = stat;
-        if (newHindered === stat) newHindered = null;
-      }
-    } else {
-      if (newHindered === stat) {
-        newHindered = null;
-      } else {
-        newHindered = stat;
-        if (newBoosted === stat) newBoosted = null;
-      }
-    }
-
-    const newNature = getNatureFromStats(newBoosted, newHindered);
-    return { boostedStat: newBoosted, hinderedStat: newHindered, nature: newNature };
+    const nature = toggleNature(getNatureFromStats(currentBoosted, currentHindered), stat, mod);
+    const { boostedStat, hinderedStat } = getNatureStats(nature);
+    return { boostedStat, hinderedStat, nature };
   };
 
   const getStatsForNature = (natureName: string): StatState => {

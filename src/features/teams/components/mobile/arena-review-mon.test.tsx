@@ -60,8 +60,7 @@ const member = {
 } as TeamWithMembers['members'][number];
 
 describe('ArenaReviewMon nature cycling', () => {
-  it('leaves unrelated stats alone and lets the reduced stat toggle only between neutral and reduced', () => {
-    const onSave = vi.fn();
+  const setup = (onSave: any) =>
     render(
       <ArenaReviewMon
         member={member}
@@ -74,27 +73,45 @@ describe('ArenaReviewMon nature cycling', () => {
       />,
     );
 
-    for (const stat of ['B', 'D', 'S']) {
-      fireEvent.click(screen.getByRole('button', { name: stat }));
+  // Stat buttons render as `C`, `C ↑` or `A ↓` depending on role.
+  const press = (label: string) =>
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}(\\s|$)`) }));
+
+  it('cycles a stat neutral -> boost -> hinder, always landing on a real nature', () => {
+    const onSave = vi.fn();
+    setup(onSave);
+    const saveAndRead = () => {
+      press('Save');
+      return onSave.mock.calls[onSave.mock.calls.length - 1][0];
+    };
+
+    // Starts Modest: +SpA / -Atk.
+    expect(saveAndRead()).toMatchObject({ boostedStat: 'spa', hinderedStat: 'atk' });
+
+    // Boosting Def pairs it with the dump stat rather than leaving Def boosted alone.
+    press('B');
+    expect(saveAndRead()).toMatchObject({ boostedStat: 'def', hinderedStat: 'atk', nature: 'Bold (+DEF, -ATK)' });
+
+    // Atk is the hindered stat here, so it cycles back to neutral — clearing both halves.
+    press('A');
+    expect(saveAndRead()).toMatchObject({ boostedStat: null, hinderedStat: null, nature: 'Hardy' });
+
+    // Pressing it again boosts Atk, dumping SpA.
+    press('A');
+    expect(saveAndRead()).toMatchObject({ boostedStat: 'atk', hinderedStat: 'spa', nature: 'Adamant (+ATK, -SPA)' });
+  });
+
+  it('never produces a half-set nature, whichever stats are pressed', () => {
+    const onSave = vi.fn();
+    setup(onSave);
+
+    // A lone boost renders x1.1 in the stat display while the damage engine reads neutral.
+    // No sequence of presses may reach that state.
+    for (const stat of ['A', 'B', 'C', 'D', 'S', 'A', 'C', 'B', 'S', 'D']) {
+      press(stat);
+      press('Save');
+      const cfg = onSave.mock.calls[onSave.mock.calls.length - 1][0];
+      expect(Boolean(cfg.boostedStat)).toBe(Boolean(cfg.hinderedStat));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: 'atk',
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: /^A/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: null,
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'A' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: 'atk',
-    }));
   });
 });
