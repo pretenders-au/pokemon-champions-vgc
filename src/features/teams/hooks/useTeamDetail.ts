@@ -5,11 +5,11 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
-import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { useModalRegistry } from '@/hooks/useModalRegistry';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { useFormat } from '@/features/formats/FormatContext';
-import { matchSpecies, matchAbility, matchMove, matchItem } from '@/features/pokemon/utils/showdown-matcher';
+import { resolveSet, resolveSets, toConfig, KIND_LABEL } from '@/features/pokemon/utils/showdown-import';
+import { appDex } from '@/features/pokemon/utils/appDex';
 
 export function useTeamDetail(id: string | undefined) {
   const { getTeam, updateTeam, loading: teamsLoading } = useTeams();
@@ -21,6 +21,8 @@ export function useTeamDetail(id: string | undefined) {
   
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
   const [moveList, setMoveList] = useState<MoveData[]>([]);
+
+  const dex = () => appDex(pokemonList, moveList);
   
   const modals = useModalRegistry({
     editor: false,
@@ -174,69 +176,10 @@ export function useTeamDetail(id: string | undefined) {
   const handleImportTeamShowdown = async (sets: ParsedShowdownSet[]) => {
     if (!team) return;
 
-    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const newMembers: PokemonConfig[] = [];
+    const { members: newMembers, errors } = await resolveSets(sets.slice(0, 6), dex());
 
-    for (const set of sets.slice(0, 6)) {
-      const showdownNorm = normalizeName(set.species);
-      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
-
-      if (!p) {
-        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
-        if (megaMatch) {
-          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
-          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
-        }
-      }
-
-      if (!p && showdownNorm === 'indeedeef') {
-        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
-      }
-
-      if (!p) {
-        const prefix = set.species.toLowerCase().split('-')[0];
-        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
-            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
-      }
-
-      if (!p) continue;
-
-      let abilityNames: string[] = [];
-      try {
-        abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
-      } catch (e) {}
-
-      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
-      while (movesData.length < 4) movesData.push(null);
-      const natureStats = getNatureStats(set.nature);
-
-      newMembers.push({
-        selectedId: p.id,
-        type1: p.type1,
-        type2: p.type2,
-        baseHp: p.baseHp,
-        baseAtk: p.baseAttack,
-        baseDef: p.baseDefense,
-        baseSpa: p.baseSpAtk,
-        baseSpd: p.baseSpDef,
-        baseSpe: p.baseSpeed,
-        spHp: set.evs.hp,
-        spAtk: set.evs.atk,
-        spDef: set.evs.def,
-        spSpa: set.evs.spa,
-        spSpd: set.evs.spd,
-        spSpe: set.evs.spe,
-        nature: getFormattedNature(set.nature),
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
-        moves: movesData.slice(0, 4),
-        activeMoveIndex: 0,
-        abilities: abilityNames,
-        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
-        item: set.item,
-        hpPercent: 100,
-        isTypeOverridden: false,
-      });
+    if (errors.length > 0) {
+      alert(`The following terms could not be recognized:\n${errors.map((e) => `${KIND_LABEL[e.kind]}: ${e.value}`).join('\n')}`);
     }
 
     if (newMembers.length === 0) {
@@ -258,100 +201,18 @@ export function useTeamDetail(id: string | undefined) {
   const handleImportSingleShowdown = async (set: ParsedShowdownSet) => {
     if (!team) return;
 
-    const corrections: string[] = [];
+    const result = await resolveSet(set, dex());
 
-    const speciesMatch = matchSpecies(set.species, pokemonList);
-    if (!speciesMatch) {
-      alert(`Could not find Pokémon matching "${set.species}"`);
+    // Single-set import aborts on the first failure, in the order set resolution
+    // reports them: species, ability, item, then moves.
+    if (!result.ok || result.errors.length > 0) {
+      const { kind, value } = result.errors[0];
+      alert(`Could not find ${KIND_LABEL[kind]} matching "${value}"`);
       return;
     }
-    const p = speciesMatch.match;
-    if (speciesMatch.isFuzzy) {
-      corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
-    }
+    const { resolved, corrections } = result;
 
-    let abilityResult: { nameEn: string; nameZh: string | null }[] = [];
-    try {
-      abilityResult = await pokemonRepository.getPokemonAbilitiesBilingual(p.id);
-    } catch (e) {}
-
-    const abilityNames = abilityResult.map(a => a.nameEn);
-    const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
-    const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
-
-    if (set.ability && !resolvedAbility) {
-      alert(`Could not find Ability matching "${set.ability}"`);
-      return;
-    }
-
-    let activeAbility = abilityResult[0]?.nameEn || null;
-    if (resolvedAbility) {
-      const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
-      if (dbRow?.nameEn) {
-        activeAbility = dbRow.nameEn;
-        if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
-          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
-        }
-      }
-    }
-
-    const resolvedItem = set.item ? matchItem(set.item) : null;
-    let item = set.item;
-    if (resolvedItem) {
-      item = resolvedItem.match;
-      if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
-        corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
-      }
-    } else if (set.item) {
-      alert(`Could not find Item matching "${set.item}"`);
-      return;
-    }
-
-    const movesData: (MoveData | null)[] = [];
-    for (const mName of set.moves) {
-      const mm = matchMove(mName, moveList);
-      if (mm) {
-        if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
-          corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
-        }
-        movesData.push(mm.match);
-      } else {
-        alert(`Could not find Move matching "${mName}"`);
-        return;
-      }
-    }
-
-    while (movesData.length < 4) movesData.push(null);
-    const natureStats = getNatureStats(set.nature);
-
-    const newConfig: PokemonConfig = {
-      selectedId: p.id,
-      type1: p.type1,
-      type2: p.type2,
-      baseHp: p.baseHp,
-      baseAtk: p.baseAttack,
-      baseDef: p.baseDefense,
-      baseSpa: p.baseSpAtk,
-      baseSpd: p.baseSpDef,
-      baseSpe: p.baseSpeed,
-      spHp: set.evs.hp,
-      spAtk: set.evs.atk,
-      spDef: set.evs.def,
-      spSpa: set.evs.spa,
-      spSpd: set.evs.spd,
-      spSpe: set.evs.spe,
-      nature: getFormattedNature(set.nature),
-      boostedStat: natureStats.boostedStat,
-      hinderedStat: natureStats.hinderedStat,
-      moves: movesData.slice(0, 4),
-      activeMoveIndex: 0,
-      abilities: abilityNames,
-      activeAbility,
-      item,
-      hpPercent: 100,
-      isTypeOverridden: false,
-    };
-
+    const newConfig = toConfig(set, resolved);
     const newMembers = [...team.members.map(m => m.configuration), newConfig];
     try {
       await updateTeam(team.id, team.name, newMembers);

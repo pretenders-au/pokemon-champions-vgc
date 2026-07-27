@@ -4,9 +4,8 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { TeamWithMembers } from '@/db/repositories/team.repo';
-import { parseShowdownTeam, type ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
-import { matchSpecies } from '@/features/pokemon/utils/showdown-matcher';
-import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
+import { parseShowdownTeam } from '@/features/pokemon/utils/showdown-parser';
+import { resolveSetWith, toConfig } from '@/features/pokemon/utils/showdown-import';
 import { fetchTeamFromUrl } from '@/services/paste-fetcher';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { ArenaPlayerScanReview } from '@/features/scan/ArenaPlayerScanReview';
@@ -39,32 +38,6 @@ const SP_FIELDS: [keyof PokemonConfig, string][] = [
   ['spHp', 'H'], ['spAtk', 'A'], ['spDef', 'B'], ['spSpa', 'C'], ['spSpd', 'D'], ['spSpe', 'S'],
 ];
 const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
-
-/**
- * Build a full PokemonConfig from a parsed Showdown set — synchronously.
- * Species + base stats come from pokemonList, moves from moveList; set.evs are
- * already SP-scale (the parser converts EV→SP), so they map straight to spX.
- */
-export function setToConfig(set: ParsedShowdownSet, pokemonList: PokemonBaseStats[], moveList: MoveData[]): PokemonConfig {
-  const p = matchSpecies(set.species, pokemonList)?.match ?? null;
-  const { boostedStat, hinderedStat } = getNatureStats(set.nature);
-  const findMove = (name: string) => moveList.find((m) => m.nameEn.toLowerCase() === name.trim().toLowerCase()) ?? null;
-  return {
-    selectedId: p?.id ?? null,
-    type1: p?.type1 ?? null, type2: p?.type2 ?? null,
-    baseHp: p?.baseHp ?? 0, baseAtk: p?.baseAttack ?? 0, baseDef: p?.baseDefense ?? 0,
-    baseSpa: p?.baseSpAtk ?? 0, baseSpd: p?.baseSpDef ?? 0, baseSpe: p?.baseSpeed ?? 0,
-    spHp: set.evs.hp, spAtk: set.evs.atk, spDef: set.evs.def, spSpa: set.evs.spa, spSpd: set.evs.spd, spSpe: set.evs.spe,
-    nature: set.nature || 'Hardy', boostedStat, hinderedStat,
-    moves: [0, 1, 2, 3].map((i) => (set.moves[i] ? findMove(set.moves[i]) : null)),
-    activeMoveIndex: 0,
-    abilities: set.ability ? [set.ability] : [],
-    activeAbility: set.ability ?? null,
-    item: set.item ?? null,
-    hpPercent: 100,
-    isTypeOverridden: false,
-  };
-}
 
 function typeChip(type: string): React.CSSProperties {
   const c = `var(--type-${type})`;
@@ -110,7 +83,15 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
   const [adderKey, setAdderKey] = useState(0); // remount the search box to clear it after each add
 
   const sets = useMemo(() => (method === 'scan' ? [] : parseShowdownTeam(text)), [text, method]);
-  const configs = useMemo(() => sets.slice(0, 6).map((s) => setToConfig(s, pokemonList, moveList)), [sets, pokemonList, moveList]);
+  // Render-time resolution: no ability list is available synchronously, so set.ability is
+  // carried through unvalidated. See CONTEXT.md ("Set resolution").
+  const configs = useMemo(
+    () => sets.slice(0, 6).flatMap((s) => {
+      const r = resolveSetWith(s, pokemonList, moveList, null);
+      return r.ok ? [toConfig(s, r.resolved)] : [];
+    }),
+    [sets, pokemonList, moveList]
+  );
   // In edit mode, preview the team's real members until the user pastes a replacement.
   const baseConfigs = sets.length > 0 ? configs : (initialConfigs ?? []);
   const displayConfigs = method === 'build' ? builtConfigs : baseConfigs.map((cfg, i) => edited[i] ?? cfg);

@@ -7,7 +7,8 @@ import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
-import { matchSpecies, matchAbility, matchMove, matchItem } from '@/features/pokemon/utils/showdown-matcher';
+import { resolveSet, KIND_LABEL } from '@/features/pokemon/utils/showdown-import';
+import { appDex } from '@/features/pokemon/utils/appDex';
 
 export function useCalculatorActions(
   dispatch: React.Dispatch<CalcAction>,
@@ -88,79 +89,17 @@ export function useCalculatorActions(
   };
 
   const handleImportShowdown = async (side: 'p1' | 'p2', set: ParsedShowdownSet) => {
-    const corrections: string[] = [];
+    const result = await resolveSet(set, appDex(pokemonList, moveList));
 
-    const speciesMatch = matchSpecies(set.species, pokemonList);
-    if (!speciesMatch) {
-      alert(`Could not find Pokémon matching "${set.species}"`);
+    // Loading one side aborts on the first failure, in the order set resolution
+    // reports them: species, ability, item, then moves.
+    if (!result.ok || result.errors.length > 0) {
+      const { kind, value } = result.errors[0];
+      alert(`Could not find ${KIND_LABEL[kind]} matching "${value}"`);
       return;
     }
-    const p = speciesMatch.match;
-    if (speciesMatch.isFuzzy) {
-      corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
-    }
-
-    let abilityResult: { nameEn: string | null; nameZh: string | null }[] = [];
-    try {
-      const db = await getDb();
-      abilityResult = await db.select({ nameEn: abilities.nameEn, nameZh: abilities.nameZh })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-    } catch (e) {}
-
-    const abilityNames = abilityResult.map(a => a.nameEn).filter((name): name is string => !!name);
-    const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
-    const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
-
-    if (set.ability && !resolvedAbility) {
-      alert(`Could not find Ability matching "${set.ability}"`);
-      return;
-    }
-
-    let activeAbility = abilityResult[0]?.nameEn || null;
-    if (resolvedAbility) {
-      const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
-      if (dbRow?.nameEn) {
-        activeAbility = dbRow.nameEn;
-        if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
-          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
-        }
-      }
-    }
-
-    const resolvedItem = set.item ? matchItem(set.item) : null;
-    let item = set.item;
-    if (resolvedItem) {
-      item = resolvedItem.match;
-      if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
-        corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
-      }
-    } else if (set.item) {
-      alert(`Could not find Item matching "${set.item}"`);
-      return;
-    }
-
-    const movesData: (MoveData | null)[] = [];
-    for (const mName of set.moves) {
-      const mm = matchMove(mName, moveList);
-      if (mm) {
-        if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
-          corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
-        }
-        movesData.push(mm.match);
-      } else {
-        alert(`Could not find Move matching "${mName}"`);
-        return;
-      }
-    }
-
-    const natureStats = getNatureStats(set.nature);
-
-    while (movesData.length < 4) {
-      movesData.push(null);
-    }
+    const { corrections } = result;
+    const { pokemon: p, abilityNames, activeAbility, item, movesData, natureStats } = result.resolved;
 
     const updatedSet = {
       ...set,
