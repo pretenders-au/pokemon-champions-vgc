@@ -1,3 +1,4 @@
+import { getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
 import { useMemo } from 'react';
 import type { CalcState, SideState } from './useCalculatorState';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
@@ -72,10 +73,9 @@ export function useDamageScenarios(
         ...defender,
         spHp: 32,
         ...(investsDef ? { spDef: 32 } : { spSpd: 32 }),
-        boostedStat: investsDef ? 'def' : 'spd',
-        hinderedStat: 'atk',
+        nature: getNatureFromStats(investsDef ? 'def' : 'spd', 'atk'),
       } as SideState;
-      const noSpSide = { ...defender, ...SP_ZERO, boostedStat: null, hinderedStat: null } as SideState;
+      const noSpSide = { ...defender, ...SP_ZERO, nature: 'Hardy' } as SideState;
 
       return {
         crit: run(defender, critMove),

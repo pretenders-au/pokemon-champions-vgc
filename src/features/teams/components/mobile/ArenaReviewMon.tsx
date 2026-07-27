@@ -128,8 +128,9 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const [sp, setSp] = useState<Record<string, number>>({
     spHp: c.spHp, spAtk: c.spAtk, spDef: c.spDef, spSpa: c.spSpa, spSpd: c.spSpd, spSpe: c.spSpe,
   });
-  const [up, setUp] = useState<string | null>(c.boostedStat);
-  const [down, setDown] = useState<string | null>(c.hinderedStat);
+  const initialNature = getNatureStats(c.nature);
+  const [up, setUp] = useState<string | null>(initialNature.boostedStat);
+  const [down, setDown] = useState<string | null>(initialNature.hinderedStat);
   const [item, setItem] = useState(c.item ?? '');
   const [ability, setAbility] = useState(c.activeAbility ?? '');
   const [moves, setMoves] = useState<(MoveData | null)[]>([0, 1, 2, 3].map((i) => c.moves[i] ?? null));
@@ -168,7 +169,7 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const buildConfig = (): PokemonConfig => ({
     ...c,
     spHp: sp.spHp, spAtk: sp.spAtk, spDef: sp.spDef, spSpa: sp.spSpa, spSpd: sp.spSpd, spSpe: sp.spSpe,
-    boostedStat: up, hinderedStat: down, nature: getNatureFromStats(up, down),
+    nature: getNatureFromStats(up, down),
     item: item.trim() || null, activeAbility: ability.trim() || null, moves,
   });
 

@@ -6,6 +6,7 @@ import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 
 const pokemonList = [{
   id: 6,
@@ -40,9 +41,7 @@ const config: PokemonConfig = {
   spSpa: 11,
   spSpd: 0,
   spSpe: 13,
-  nature: 'Modest',
-  boostedStat: 'spa',
-  hinderedStat: 'atk',
+  nature: 'Modest (+SPA, -ATK)',
   moves: [null, null, null, null],
   activeMoveIndex: 0,
   abilities: ['Drought'],
@@ -86,19 +85,19 @@ describe('ArenaReviewMon nature cycling', () => {
     };
 
     // Starts Modest: +SpA / -Atk.
-    expect(saveAndRead()).toMatchObject({ boostedStat: 'spa', hinderedStat: 'atk' });
+    expect(saveAndRead()).toMatchObject({ nature: 'Modest (+SPA, -ATK)' });
 
     // Boosting Def pairs it with the dump stat rather than leaving Def boosted alone.
     press('B');
-    expect(saveAndRead()).toMatchObject({ boostedStat: 'def', hinderedStat: 'atk', nature: 'Bold (+DEF, -ATK)' });
+    expect(saveAndRead()).toMatchObject({ nature: 'Bold (+DEF, -ATK)' });
 
     // Atk is the hindered stat here, so it cycles back to neutral — clearing both halves.
     press('A');
-    expect(saveAndRead()).toMatchObject({ boostedStat: null, hinderedStat: null, nature: 'Hardy' });
+    expect(saveAndRead()).toMatchObject({ nature: 'Hardy' });
 
     // Pressing it again boosts Atk, dumping SpA.
     press('A');
-    expect(saveAndRead()).toMatchObject({ boostedStat: 'atk', hinderedStat: 'spa', nature: 'Adamant (+ATK, -SPA)' });
+    expect(saveAndRead()).toMatchObject({ nature: 'Adamant (+ATK, -SPA)' });
   });
 
   it('never produces a half-set nature, whichever stats are pressed', () => {
@@ -111,7 +110,8 @@ describe('ArenaReviewMon nature cycling', () => {
       press(stat);
       press('Save');
       const cfg = onSave.mock.calls[onSave.mock.calls.length - 1][0];
-      expect(Boolean(cfg.boostedStat)).toBe(Boolean(cfg.hinderedStat));
+      const { boostedStat, hinderedStat } = getNatureStats(cfg.nature);
+      expect(Boolean(boostedStat)).toBe(Boolean(hinderedStat));
     }
   });
 });

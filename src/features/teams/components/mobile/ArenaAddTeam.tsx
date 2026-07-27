@@ -13,6 +13,7 @@ import { ArenaReviewMon } from './ArenaReviewMon';
 import { useViewportMode } from '@/hooks/useViewportMode';
 import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
 import { pokemonRepository } from '@/db/repositories/pokemon.repo';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface ArenaAddTeamProps {
   pokemonList: PokemonBaseStats[];
@@ -229,9 +230,10 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
               <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 9 }}>
                 {displayConfigs.map((cfg, i) => {
                   const isEdited = edited[i] != null;
-                  const natureStr = cfg.boostedStat && cfg.hinderedStat && cfg.boostedStat !== cfg.hinderedStat
-                    ? `↑${STAT_SHORT[cfg.boostedStat] ?? cfg.boostedStat} ↓${STAT_SHORT[cfg.hinderedStat] ?? cfg.hinderedStat}`
-                    : cfg.nature;
+                  const { boostedStat: nUp, hinderedStat: nDown } = getNatureStats(cfg.nature);
+                    const natureStr = nUp && nDown
+                      ? `↑${STAT_SHORT[nUp] ?? nUp} ↓${STAT_SHORT[nDown] ?? nDown}`
+                      : cfg.nature;
                   const spStr = SP_FIELDS.filter(([k]) => (cfg[k] as number) > 0).map(([k, l]) => `${l} ${cfg[k]}`).join(' · ');
                   return (
                     <div key={i} style={{ position: 'relative', minWidth: 0 }}>

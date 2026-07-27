@@ -4,6 +4,7 @@ import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface ArenaTeamsLandscapeProps {
   teams: TeamWithMembers[];
@@ -169,8 +170,9 @@ export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
                     }
                     const c = m.configuration;
                     const { hasStats, hasMoves } = memberFlags(c);
-                    const natureStr = c.boostedStat && c.hinderedStat && c.boostedStat !== c.hinderedStat
-                      ? `↑${STAT_SHORT[c.boostedStat] ?? c.boostedStat} ↓${STAT_SHORT[c.hinderedStat] ?? c.hinderedStat}`
+                    const { boostedStat: nUp, hinderedStat: nDown } = getNatureStats(c.nature);
+                    const natureStr = nUp && nDown
+                      ? `↑${STAT_SHORT[nUp] ?? nUp} ↓${STAT_SHORT[nDown] ?? nDown}`
                       : c.nature;
                     const spStr = SP_FIELDS.filter(([k]) => (c[k] as number) > 0).map(([k, l]) => `${l} ${c[k]}`).join('  ·  ');
                     return (

@@ -25,8 +25,6 @@ interface PokemonPanelProps {
   onNatureChange: (nature: string) => void;
   onApplySpread: (spread: Spread) => void;
   onResetBuild: () => void;
-  boostedStat: string | null;
-  hinderedStat: string | null;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
   stages: Record<string, number>;
   onStageChange: (stat: string, val: number) => void;
@@ -131,8 +129,6 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
           spSpa: stats.spSpa,
           spSpd: stats.spSpd,
           spSpe: stats.spSpe,
-          boostedStat: props.boostedStat,
-          hinderedStat: props.hinderedStat,
           nature: props.stats.nature || 'Hardy',
           moves: props.moves,
           activeMoveIndex: 0, 

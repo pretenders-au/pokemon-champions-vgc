@@ -3,7 +3,6 @@ import { abilities, pokemonAbilities } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
-import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
@@ -69,7 +68,6 @@ export function useCalculatorActions(
     } catch (e) {}
 
     const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
-    const natureStats = getNatureStats(preset.nature);
 
     while (movesData.length < 4) {
       movesData.push(null);
@@ -82,8 +80,7 @@ export function useCalculatorActions(
         pokemon: p,
         abilities: abilityNames,
         movesData: movesData.slice(0, 4),
-        preset,
-        natureStats
+        preset
       }
     });
   };
@@ -99,7 +96,7 @@ export function useCalculatorActions(
       return;
     }
     const { corrections } = result;
-    const { pokemon: p, abilityNames, activeAbility, item, movesData, natureStats } = result.resolved;
+    const { pokemon: p, abilityNames, activeAbility, item, movesData } = result.resolved;
 
     const updatedSet = {
       ...set,
@@ -115,8 +112,7 @@ export function useCalculatorActions(
         pokemon: p,
         abilities: abilityNames,
         movesData: movesData.slice(0, 4),
-        set: updatedSet,
-        natureStats
+        set: updatedSet
       }
     });
 
@@ -143,7 +139,6 @@ export function useCalculatorActions(
     } catch (e) {}
 
     const movesData = config.moves.map((m: any) => m ? (moveList.find(move => move.nameEn === m.nameEn) || null) : null);
-    const natureStats = getNatureStats(config.nature);
 
     while (movesData.length < 4) {
       movesData.push(null);
@@ -156,8 +151,7 @@ export function useCalculatorActions(
         config,
         pokemon: p,
         abilities: abilityNames,
-        movesData: movesData.slice(0, 4),
-        natureStats
+        movesData: movesData.slice(0, 4)
       }
     });
   };

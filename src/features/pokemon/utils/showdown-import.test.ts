@@ -44,7 +44,6 @@ describe('resolveSetWith — success', () => {
     expect(resolved?.activeAbility).toBe('Rough Skin');
     expect(resolved?.abilityNames).toEqual(['Sand Veil', 'Rough Skin']);
     expect(resolved?.item).toBe('Rocky Helmet');
-    expect(resolved?.natureStats).toEqual({ boostedStat: 'spe', hinderedStat: 'spa' });
   });
 
   it('pads moves to four slots', () => {
@@ -236,8 +235,7 @@ describe('toConfig', () => {
     expect(c.activeAbility).toBe('Rough Skin');
     expect(c.abilities).toEqual(['Sand Veil', 'Rough Skin']);
     // Jolly = +Spe / -SpA
-    expect(c.boostedStat).toBe('spe');
-    expect(c.hinderedStat).toBe('spa');
+    expect(c.nature).toBe('Jolly (+SPE, -SPA)');
     expect(c.moves).toHaveLength(4);
     expect(c.hpPercent).toBe(100);
   });
