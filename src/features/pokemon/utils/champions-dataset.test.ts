@@ -46,6 +46,7 @@ describe('Champions dataset sanity', () => {
 const stateFor = (o: Record<string, unknown> = {}) => ({
   isTypeOverridden: false, type1: 'electric', type2: null,
   baseHp: 60, baseAtk: 100, baseDef: 55, baseSpa: 160, baseSpd: 80, baseSpe: 130,
+  nature: 'Hardy',
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   stages: {}, boostedStat: null, hinderedStat: null, hpPercent: 100,
   activeAbility: null, item: null,

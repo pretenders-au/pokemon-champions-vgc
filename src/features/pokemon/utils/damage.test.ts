@@ -7,6 +7,7 @@ describe('Critical Hit Mechanics', () => {
     type1: 'normal',
     type2: null,
     baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
+    nature: 'Hardy',
     spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
     stages: {},
     boostedStat: null,

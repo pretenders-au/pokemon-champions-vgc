@@ -4,7 +4,7 @@ import type { StatRowRead } from './statDigits';
 import type { ScanLang } from './playerTypes';
 import type { Candidate } from './types';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
-import { getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { NEUTRAL_NATURE, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PlayerScanVocab } from '@/db/repositories/scan.repo';
@@ -101,7 +101,7 @@ function deriveNature(rows: SlotStatRead[]): { name: string; confident: boolean;
   const hindered = nonHp.filter(r => r.mult === 0.9);
   const allNeutral = nonHp.every(r => r.mult === 1);
   if (allNeutral) {
-    return { name: 'Serious', confident: nonHp.every(r => r.consistent) };
+    return { name: NEUTRAL_NATURE, confident: nonHp.every(r => r.consistent) };
   }
   if (boosted.length === 1 && hindered.length === 1) {
     const boostKey = NATURE_STAT_KEYS[nonHp.indexOf(boosted[0])];
@@ -111,7 +111,7 @@ function deriveNature(rows: SlotStatRead[]): { name: string; confident: boolean;
       confident: nonHp.every(r => r.consistent),
     };
   }
-  return { name: 'Serious', confident: false, warning: 'ambiguous nature read' };
+  return { name: NEUTRAL_NATURE, confident: false, warning: 'ambiguous nature read' };
 }
 
 export function mergePlayerScan(
@@ -178,7 +178,7 @@ export function mergePlayerScan(
       slotWarnings.push('moves screen not scanned');
     }
 
-    const natureResult = statsPanel && base ? deriveNature(statReads) : { name: 'Serious', confident: false };
+    const natureResult = statsPanel && base ? deriveNature(statReads) : { name: NEUTRAL_NATURE, confident: false };
     if ('warning' in natureResult && natureResult.warning) slotWarnings.push(natureResult.warning);
 
     slots.push({

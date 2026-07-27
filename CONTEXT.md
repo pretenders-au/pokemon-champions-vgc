@@ -39,16 +39,26 @@ A **pair** — one boosted stat (×1.1) and one hindered stat (×0.9) — or neu
 such thing as a lone boost: half a pair names no nature, so the stat display and the damage
 engine would disagree about it. See `openspec/specs/granular-nature-selection`.
 
-Stored as the **name** — one of the 25 strings in `NATURES` — and nothing else. The pair is
-derived from it, never stored alongside it, so the two cannot drift apart. Read the effect on
-a stat through `natureMultiplier(nature, stat)`; never compare stats to a boosted/hindered
-field, because there isn't one.
+Persisted as the **name** — one of the 25 strings in `NATURES` — and nothing else. Neither
+`PokemonConfig` nor the calculator's side state carries a boosted/hindered field, so the name
+and the pair cannot drift apart. Read the effect on a stat through
+`natureMultiplier(nature, stat)`; never compare a stat to a boosted/hindered field, because
+there isn't one to compare against.
 
-A `+`/`-` press goes through `toggleNature`, which fills the other half of the pair with the
-conventional dump stat (Atk, or SpA when tuning Atk) so every press lands on a real nature.
+An editing surface may hold the pair as transient local state while the user works — the team
+review card does — but it resolves back to a name before anything is saved.
 
-Two seams need the name in other shapes: `bareNature` strips the display decoration for
-`@smogon/calc`, and `getNatureStats` recovers the pair for arrows and highlights.
+Two surfaces edit a nature, and **they must agree**: the desktop `+`/`-` buttons go through
+`toggleNature`, the landscape wheel and the review card through `natureForStatWheel`. Both
+share one rule — setting one half keeps the opposite half if there is one, and otherwise pairs
+with the conventional dump stat (Atk, or SpA when tuning Atk). Tuning Def while SpA is already
+dumped gives Impish, not Bold. `toggleNature` adds only "press the stat that is already set to
+return to neutral". `nature-wheel.test.ts` asserts the two agree for every nature and stat; if
+you add a third surface, put it through the same pair.
+
+Three seams need the name in other shapes: `bareNature` strips the display decoration for
+`@smogon/calc`, `getNatureStats` recovers the pair for arrows and highlights, and
+`natureArrows` renders the compact `↑C ↓A` card form.
 
 Note the stored name carries its own decoration — `"Adamant (+ATK, -SPA)"` — so it doubles as
 the display string. Localising that text would change stored data.

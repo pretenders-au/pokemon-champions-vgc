@@ -13,6 +13,7 @@ const stateFor = (o: Record<string, unknown> = {}) => ({
   isTypeOverridden: false,
   type1: 'normal', type2: null,
   baseHp: 100, baseAtk: 130, baseDef: 100, baseSpa: 130, baseSpd: 100, baseSpe: 100,
+  nature: 'Hardy',
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   stages: {}, boostedStat: null, hinderedStat: null, hpPercent: 100,
   activeAbility: null, item: null,

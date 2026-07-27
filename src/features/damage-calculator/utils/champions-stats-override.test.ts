@@ -8,7 +8,7 @@ const stateFor = (overrides: Record<string, unknown> = {}) => ({
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   stages: {},
-  boostedStat: null, hinderedStat: null, nature: 'Hardy',
+  nature: 'Hardy',
   hpPercent: 100,
   activeAbility: null, item: null,
   isReflect: false, isLightScreen: false, isAuroraVeil: false,

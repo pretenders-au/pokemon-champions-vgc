@@ -6,7 +6,7 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
 import { convertSpToEv } from '@/features/pokemon/utils/sp-ev-converter';
-import { getNatureFromStats, getNatureStats, natureMultiplier, natureForStatWheel } from '@/features/pokemon/utils/pokemon-natures';
+import { getNatureFromStats, getNatureStats, natureMultiplier, natureForStatWheel, natureWheelIndex } from '@/features/pokemon/utils/pokemon-natures';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
@@ -159,9 +159,9 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   // so the button can never leave a half-set nature behind.
   const cycleNature = (key: string) => {
     if (key === 'hp') return;
-    const current = up === key ? 2 : down === key ? 0 : 1;
-    const next = current === 1 ? 2 : current === 2 ? 0 : 1;
-    const { boostedStat, hinderedStat } = getNatureStats(natureForStatWheel(key, next));
+    const nature = getNatureFromStats(up, down);
+    const next = natureWheelIndex(nature, key) === 1 ? 2 : natureWheelIndex(nature, key) === 2 ? 0 : 1;
+    const { boostedStat, hinderedStat } = getNatureStats(natureForStatWheel(nature, key, next));
     setUp(boostedStat);
     setDown(hinderedStat);
   };

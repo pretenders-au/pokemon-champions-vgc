@@ -57,11 +57,11 @@ describe('nature derivation via merge', () => {
     expect(merged.slots[0].nature.name).toContain('Adamant');
     expect(merged.slots[0].nature.confident).toBe(true);
   });
-  it('no arrows and all-neutral math = Serious', () => {
+  it('no arrows and all-neutral math = neutral', () => {
     const neutral = { ...statsScan, panels: [{ ...statsScan.panels[0], rows: [
       { stat: 179, sp: 4, arrow: null }, mkRow(1), mkRow(1), mkRow(1), mkRow(1), mkRow(1) ] }] };
     const merged = mergePlayerScan(null, neutral, new Map([[1, bases]]));
-    expect(merged.slots[0].nature.name).toContain('Serious');
+    expect(merged.slots[0].nature.name).toContain('Hardy');
   });
 });
 
