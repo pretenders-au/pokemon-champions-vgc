@@ -10,7 +10,6 @@ import { fetchTeamFromUrl } from '@/services/paste-fetcher';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { ArenaPlayerScanReview } from '@/features/scan/ArenaPlayerScanReview';
 import { ArenaReviewMon } from './ArenaReviewMon';
-import { useViewportMode } from '@/hooks/useViewportMode';
 import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
 import { pokemonRepository } from '@/db/repositories/pokemon.repo';
 import { natureArrows, NEUTRAL_NATURE } from '@/features/pokemon/utils/pokemon-natures';
@@ -27,6 +26,8 @@ export interface ArenaAddTeamProps {
   submitLabel?: string;
   /** Which method tab to open on (defaults to paste). Portrait scan entry opens on 'scan'. */
   initialMethod?: 'paste' | 'scan';
+  /** One preview card per row instead of three across. The host decides. */
+  portrait: boolean;
 }
 
 type Method = 'paste' | 'build' | 'scan';
@@ -66,8 +67,7 @@ const textArea: React.CSSProperties = {
  * preview of the six Pokémon; click a card to fine-tune it (3c); then Create.
  * Also serves edit mode (pre-filled name + paste), where Save updates the team.
  */
-export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveList, onBack, onScanSave, onCreate, initialName, initialConfigs, submitLabel, initialMethod }) => {
-  const portrait = useViewportMode() === 'arena';
+export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveList, onBack, onScanSave, onCreate, initialName, initialConfigs, submitLabel, initialMethod, portrait }) => {
   const [method, setMethod] = useState<Method>(initialMethod ?? 'paste');
   const [name, setName] = useState(initialName ?? '');
   const [text, setText] = useState('');
@@ -137,6 +137,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
     const member = { id: `set-${idx}`, order: idx, configuration: displayConfigs[idx] } as unknown as TeamWithMembers['members'][number];
     return (
       <ArenaReviewMon
+        portrait={portrait}
         member={member}
         teamName={name || 'New team'}
         pokemonList={pokemonList}
@@ -174,7 +175,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '14px 16px' }}>
         {/* Keep the scan mounted (just hidden) across method switches so a scanned team isn't lost when toggling to Paste. */}
         <div style={{ display: method === 'scan' ? 'block' : 'none', height: '100%' }}>
-          <ArenaPlayerScanReview pokemonList={pokemonList} moveList={moveList} onSave={onScanSave} />
+          <ArenaPlayerScanReview portrait={portrait} pokemonList={pokemonList} moveList={moveList} onSave={onScanSave} />
         </div>
         {method !== 'scan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -226,7 +227,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
                   </button>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 9 }}>
+              <div data-testid="add-team-preview-grid" style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 9 }}>
                 {displayConfigs.map((cfg, i) => {
                   const isEdited = edited[i] != null;
                   const natureStr = natureArrows(cfg.nature);

@@ -18,6 +18,7 @@ import type { SlotResult } from '../scan/types';
 import { ArenaPlayerScanReview } from '../scan/ArenaPlayerScanReview';
 import { detectPlayerPanels } from '../scan/playerPanels';
 import { useTeams } from '@/features/teams/hooks/useTeams';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { useMoveList } from './useMoveList';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
@@ -33,6 +34,9 @@ const OverlayApp: React.FC = () => {
   // clobber localStorage['vgc_teams'] with only the new team.
   const { createTeam } = useTeams();
   const [playerFrame, setPlayerFrame] = useState<{ blob: Blob; seq: number } | null>(null);
+  // The overlay is a host, like Layout: it reads the panel's own viewport once and hands
+  // the layout to the review card, which no longer consults a global itself.
+  const portrait = useViewportMode() === 'arena';
   const [view, setView] = useState<View>('idle');
   const [errorReason, setErrorReason] = useState<'empty' | 'battle'>('empty');
   const [confirmSlots, setConfirmSlots] = useState<SlotResult[]>([]);
@@ -273,6 +277,7 @@ const OverlayApp: React.FC = () => {
               )}
               <div className="flex-1 min-h-0">
                 <ArenaPlayerScanReview
+                  portrait={portrait}
                   pokemonList={pokemonList}
                   moveList={moveList}
                   sources={[]}

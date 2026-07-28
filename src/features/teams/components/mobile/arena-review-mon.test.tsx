@@ -62,6 +62,7 @@ describe('ArenaReviewMon nature cycling', () => {
   const setup = (onSave: any) =>
     render(
       <ArenaReviewMon
+        portrait={false}
         member={member}
         teamName="M-B"
         pokemonList={pokemonList}
@@ -113,5 +114,37 @@ describe('ArenaReviewMon nature cycling', () => {
       const { boostedStat, hinderedStat } = getNatureStats(cfg.nature);
       expect(Boolean(boostedStat)).toBe(Boolean(hinderedStat));
     }
+  });
+});
+
+describe('ArenaReviewMon layout', () => {
+  // The body is two columns beside each other on landscape and stacked in portrait.
+  // Before `portrait` became a prop this was read from a global, and since jsdom has no
+  // matchMedia every test in this file rendered the landscape branch — the portrait one
+  // had never executed.
+  const body = () => screen.getByTestId('review-mon-body');
+
+  const renderAt = (portrait: boolean) =>
+    render(
+      <ArenaReviewMon
+        member={member}
+        teamName="M-B"
+        pokemonList={pokemonList}
+        moveList={moveList}
+        onBack={() => {}}
+        onSave={vi.fn()}
+        saveLabel="Save"
+        portrait={portrait}
+      />,
+    );
+
+  it('stacks the columns in portrait', () => {
+    renderAt(true);
+    expect(body().style.flexDirection).toBe('column');
+  });
+
+  it('puts them side by side otherwise', () => {
+    renderAt(false);
+    expect(body().style.flexDirection).toBe('row');
   });
 });

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { Sprite, Icon, ItemIcon, TypeBadge } from '@/design-system/arena';
-import { useViewportMode } from '@/hooks/useViewportMode';
 import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
@@ -38,6 +37,8 @@ export interface PlayerScanReviewProps {
   hint?: React.ReactNode;
   /** Externally captured frame; scanned whenever `seq` advances (overlay bubble taps). */
   frame?: { blob: Blob; seq: number } | null;
+  /** One glance card per row instead of three across. The host decides. */
+  portrait: boolean;
 }
 
 /**
@@ -48,7 +49,7 @@ export interface PlayerScanReviewProps {
  * (`sources` [] to hide pickers, `hint` copy, `frame` for bubble-tap captures),
  * so the Android bubble popup shares this polished view.
  */
-export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame }) => {
+export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame, portrait }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
@@ -57,7 +58,6 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemon
 
   React.useEffect(() => { if (active) void loadClassifier(); }, [active]);
 
-  const portrait = useViewportMode() === 'arena';
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
   // Move's type name (for the type-colored chip); null when unknown/empty.
@@ -204,7 +204,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemon
         {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
         {lastError && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--danger)' }}>{lastError}</div>}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '11px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3,1fr)', gap: 9 }}>
+          <div data-testid="scan-glance-grid" style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3,1fr)', gap: 9 }}>
             {merged.slots.map((s) => {
               const e = edits[s.slot] ?? toEditable(s);
               const flags = deriveSlotFlags(s, vocab);
@@ -368,6 +368,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemon
   const member = { id: `slot-${openSlot}`, order: openSlot, configuration: openConfig } as unknown as TeamWithMembers['members'][number];
   return (
     <ArenaReviewMon
+      portrait={portrait}
       key={e.speciesId ?? 'none'}
       member={member}
       teamName="Scanned team"

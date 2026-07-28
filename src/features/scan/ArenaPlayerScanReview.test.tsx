@@ -34,21 +34,21 @@ afterEach(cleanup);
 describe('ArenaPlayerScanReview hosting seams', () => {
   it('renders the default file + camera capture buttons when sources is omitted', () => {
     const { deps } = mkDeps();
-    render(<ArenaPlayerScanReview pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} />);
+    render(<ArenaPlayerScanReview portrait={false} pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} />);
     expect(screen.getByRole('button', { name: 'Add screenshot' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Take photo' })).toBeTruthy();
   });
 
   it('sources=[] hides the capture buttons (overlay hosting)', () => {
     const { deps } = mkDeps();
-    render(<ArenaPlayerScanReview pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} sources={[]} />);
+    render(<ArenaPlayerScanReview portrait={false} pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} sources={[]} />);
     expect(screen.queryByRole('button', { name: 'Add screenshot' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Take photo' })).toBeNull();
   });
 
   it('hint replaces the default intro copy', () => {
     const { deps } = mkDeps();
-    render(<ArenaPlayerScanReview pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} hint={<p>bubble-hint</p>} />);
+    render(<ArenaPlayerScanReview portrait={false} pokemonList={pokemonList} moveList={[]} onSave={() => {}} deps={deps} hint={<p>bubble-hint</p>} />);
     expect(screen.getByText('bubble-hint')).toBeTruthy();
     expect(screen.queryByText(/Add the two in-game screens/)).toBeNull();
   });
@@ -56,7 +56,7 @@ describe('ArenaPlayerScanReview hosting seams', () => {
   it('scans an externally captured frame whenever seq advances, never twice per seq', async () => {
     const { deps, scanCalls } = mkDeps();
     const blob = new Blob(['x']);
-    const props = { pokemonList, moveList: [], onSave: () => {}, deps, sources: [] as any[] };
+    const props = { portrait: false, pokemonList, moveList: [], onSave: () => {}, deps, sources: [] as any[] };
     const view = render(<ArenaPlayerScanReview {...(props as any)} frame={{ blob, seq: 1 }} />);
     await act(async () => {});
     expect(scanCalls).toHaveLength(1);

@@ -11,7 +11,6 @@ import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import ItemImage from '@/components/atoms/ItemImage';
-import { useViewportMode } from '@/hooks/useViewportMode';
 
 export interface ArenaReviewMonProps {
   member: TeamWithMembers['members'][number];
@@ -24,6 +23,8 @@ export interface ArenaReviewMonProps {
   saveLabel?: string;
   /** Optional content rendered directly under the header — e.g. the scan flow's species-correction band. */
   banner?: React.ReactNode;
+  /** Stack the two columns instead of placing them side by side. The host decides. */
+  portrait: boolean;
 }
 
 const STATS: { key: string; label: string; short: string; ev: string; baseKey: keyof PokemonConfig; spKey: keyof PokemonConfig }[] = [
@@ -121,9 +122,8 @@ const MoveField: React.FC<{ index: number; value: MoveData | null; moveList: Mov
  * Note: the app uses Champions SP (0–32) via championsStat — the same numbers
  * the calculator shows — rather than the mock's raw 0–252 EVs.
  */
-export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel, banner }) => {
+export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel, banner, portrait }) => {
   const c = member.configuration;
-  const portrait = useViewportMode() === 'arena';
   const species = pokemonList.find((p) => p.id === c.selectedId);
   const [sp, setSp] = useState<Record<string, number>>({
     spHp: c.spHp, spAtk: c.spAtk, spDef: c.spDef, spSpa: c.spSpa, spSpd: c.spSpd, spSpe: c.spSpe,
@@ -211,7 +211,7 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
       {banner}
 
       {/* body: moves | stats — side by side on landscape, stacked in portrait */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: portrait ? 'column' : 'row', overflowY: portrait ? 'auto' : 'visible', scrollbarWidth: 'none' }}>
+      <div data-testid="review-mon-body" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: portrait ? 'column' : 'row', overflowY: portrait ? 'auto' : 'visible', scrollbarWidth: 'none' }}>
         {/* LEFT: moves · ability · item */}
         <div style={{ width: portrait ? '100%' : '48%', flex: 'none', overflowY: portrait ? 'visible' : 'auto', scrollbarWidth: 'none', borderRight: portrait ? 'none' : '1px solid var(--line-1)', borderBottom: portrait ? '1px solid var(--line-1)' : 'none', padding: '13px 15px' }}>
           <div style={{ ...micro, marginBottom: 11 }}>Moves · ability · item</div>
