@@ -33,6 +33,20 @@ One configured Pokémon: species and base stats, **SP** spread, **Nature**, abil
 to four moves. The unit a **Team** is made of, and what one side of the calculator is loaded
 from. Type `PokemonConfig`.
 
+Two reducers edit one, and **they must agree**: the team editor's `pokemonReducer` and the
+calculator's `sideReducer`. Every one of the editor's 18 cases also exists in the calculator,
+because a side is a config plus the battle instance — `SideState` is `PokemonConfig`'s 24
+fields plus 11 more (`stages`, `movesHits`, the screen flags, …). Those extra fields are the
+only licensed difference; on the shared 24 the two must produce the same result from the same
+edit. `reducer-agreement.test.ts` asserts it case by case, and it has caught real drift —
+a spread surviving a species change, an imported Aegislash left without its form.
+
+`LOAD_CONFIG` is the exception, and only in shape: the editor takes a whole config, the
+calculator takes config plus the dex row. Restoring a saved build also keeps its HP and
+active move slot, which an import deliberately resets.
+
+If you add a third surface that edits a build, put it through the same test.
+
 ### Nature
 
 A **pair** — one boosted stat (×1.1) and one hindered stat (×0.9) — or neutral. There is no

@@ -20,9 +20,13 @@ import type { MoveData } from '@/components/molecules/MoveSearchSelect';
  * If the shared cases are ever extracted into a single build reducer, this stays green
  * for free; if that extraction changes behaviour, it goes red.
  *
- * One case is exempt. `LOAD_CONFIG` takes genuinely different payloads — the editor takes
- * a whole PokemonConfig, the calculator takes config + pokemon + abilities + movesData —
- * so there is no equivalent input to feed both. Every other shared case is covered below.
+ * One case is exempt from the table. `LOAD_CONFIG` takes genuinely different payloads —
+ * the editor takes a whole PokemonConfig, the calculator takes config + pokemon +
+ * abilities + movesData — so there is no equivalent input to feed both. It gets its own
+ * tests below instead: the payloads differ, but the two must still agree about a missing
+ * form. They deliberately still differ on `activeMoveIndex` and `hpPercent`, because
+ * restoring a saved build should keep the HP and cursor it was saved with, unlike an
+ * import that replaced every move.
  */
 
 // The build half of SideState — exactly PokemonConfig's fields. Listed rather than derived
@@ -112,6 +116,26 @@ describe('sideReducer and pokemonReducer agree on the build', () => {
 
   it.each(CASES)('$name', ({ side, config }) => {
     expect(build(sideReducer(startSide, side))).toEqual(build(pokemonReducer(START, config)));
+  });
+});
+
+describe('LOAD_CONFIG', () => {
+  // Exempt from the table above because the two reducers take different payloads, but it
+  // must still heal a missing form the way the calculator does: builds saved before the
+  // field existed have none, and TOGGLE_AEGISLASH_FORM turns a missing form into swapped
+  // stats labelled 'Shield'. This is the path saved teams actually take.
+  const load = (config: PokemonConfig) => pokemonReducer(config, { type: 'LOAD_CONFIG', payload: config });
+
+  it('gives a saved Aegislash build a form when it has none', () => {
+    expect(load({ ...START, selectedId: AEGISLASH_ID, form: undefined }).form).toBe('Shield');
+  });
+
+  it('keeps the form a saved build already has', () => {
+    expect(load({ ...START, selectedId: AEGISLASH_ID, form: 'Blade' }).form).toBe('Blade');
+  });
+
+  it('leaves every other species formless', () => {
+    expect(load({ ...START, selectedId: 812 }).form).toBeUndefined();
   });
 });
 

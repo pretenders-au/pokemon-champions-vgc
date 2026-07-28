@@ -260,9 +260,13 @@ export function pokemonReducer(state: PokemonConfig, action: PokemonAction): Pok
       };
     }
     case 'LOAD_CONFIG': {
+      const config = action.payload;
       return {
-        ...action.payload,
-        nature: getFormattedNature(action.payload.nature)
+        ...config,
+        nature: getFormattedNature(config.nature),
+        // Builds saved before `form` existed carry none. Without this the first
+        // TOGGLE_AEGISLASH_FORM swaps the base stats and calls the result 'Shield'.
+        form: config.form || (config.selectedId === AEGISLASH_ID ? 'Shield' : undefined),
       };
     }
     case 'RESET_STATS': {
