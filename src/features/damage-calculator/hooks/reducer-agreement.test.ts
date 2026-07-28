@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sideReducer, initialSide, type SideState, type SideAction } from './useCalculatorState';
 import {
-  pokemonReducer, initialPokemonState, AEGISLASH_ID,
+  pokemonReducer, initialPokemonState, BUILD_FIELDS, AEGISLASH_ID,
   type PokemonConfig, type PokemonAction,
 } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
@@ -29,18 +29,9 @@ import type { MoveData } from '@/components/molecules/MoveSearchSelect';
  * import that replaced every move.
  */
 
-// The build half of SideState — exactly PokemonConfig's fields. Listed rather than derived
-// so each field is a deliberate choice; the first test below is what actually holds the
-// list honest, since this file is excluded from tsc and a typo here would silently drop a
-// field from every comparison.
-const BUILD_FIELDS = [
-  'selectedId', 'type1', 'type2',
-  'baseHp', 'baseAtk', 'baseDef', 'baseSpa', 'baseSpd', 'baseSpe',
-  'spHp', 'spAtk', 'spDef', 'spSpa', 'spSpd', 'spSpe',
-  'nature', 'moves', 'activeMoveIndex', 'abilities', 'activeAbility',
-  'item', 'hpPercent', 'isTypeOverridden', 'form',
-] as const;
-
+// BUILD_FIELDS is defined next to PokemonConfig, in a file tsc checks, so a new field —
+// optional ones included — fails to compile there rather than silently dropping out of
+// every comparison here. This file is excluded from tsc, so it cannot hold that list.
 const build = (s: SideState | PokemonConfig) =>
   Object.fromEntries(BUILD_FIELDS.map((k) => [k, (s as Record<string, unknown>)[k]]));
 
@@ -107,13 +98,6 @@ const CASES: Array<{ name: string; side: SideAction; config: PokemonAction }> = 
 ];
 
 describe('sideReducer and pokemonReducer agree on the build', () => {
-  it('compares every PokemonConfig field', () => {
-    // initialPokemonState lives in a type-checked file, so this fails if PokemonConfig
-    // gains a field nobody decided about, or if a name in BUILD_FIELDS is misspelt.
-    // `form` is optional, so it is absent from the initial state.
-    expect([...BUILD_FIELDS].sort()).toEqual([...Object.keys(initialPokemonState), 'form'].sort());
-  });
-
   it.each(CASES)('$name', ({ side, config }) => {
     expect(build(sideReducer(startSide, side))).toEqual(build(pokemonReducer(START, config)));
   });

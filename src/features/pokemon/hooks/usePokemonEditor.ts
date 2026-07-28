@@ -60,6 +60,25 @@ export interface PokemonConfig {
   form?: 'Shield' | 'Blade';
 }
 
+/**
+ * Every field a build consists of — the half of the calculator's `SideState` that is not the
+ * battle instance. Written as a map rather than an array because `Record<keyof PokemonConfig,
+ * true>` fails to compile when a field is missing, *including an optional one*. A runtime
+ * object like `initialPokemonState` cannot show optional fields at all, and test files are
+ * excluded from tsc, so this is the only place the list can be held honest.
+ *
+ * `reducer-agreement.test.ts` compares the two build reducers over exactly these.
+ */
+const BUILD_FIELD_MAP: Record<keyof PokemonConfig, true> = {
+  selectedId: true, type1: true, type2: true,
+  baseHp: true, baseAtk: true, baseDef: true, baseSpa: true, baseSpd: true, baseSpe: true,
+  spHp: true, spAtk: true, spDef: true, spSpa: true, spSpd: true, spSpe: true,
+  nature: true, moves: true, activeMoveIndex: true, abilities: true, activeAbility: true,
+  item: true, hpPercent: true, isTypeOverridden: true, form: true,
+};
+
+export const BUILD_FIELDS = Object.keys(BUILD_FIELD_MAP) as (keyof PokemonConfig)[];
+
 export type PokemonAction =
   | { type: 'SET_SP', payload: { key: string, val: number } }
   | { type: 'SET_NATURE', payload: string }
