@@ -6,6 +6,7 @@ import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 
 const pokemonList = [{
   id: 6,
@@ -40,9 +41,7 @@ const config: PokemonConfig = {
   spSpa: 11,
   spSpd: 0,
   spSpe: 13,
-  nature: 'Modest',
-  boostedStat: 'spa',
-  hinderedStat: 'atk',
+  nature: 'Modest (+SPA, -ATK)',
   moves: [null, null, null, null],
   activeMoveIndex: 0,
   abilities: ['Drought'],
@@ -60,8 +59,7 @@ const member = {
 } as TeamWithMembers['members'][number];
 
 describe('ArenaReviewMon nature cycling', () => {
-  it('leaves unrelated stats alone and lets the reduced stat toggle only between neutral and reduced', () => {
-    const onSave = vi.fn();
+  const setup = (onSave: any) =>
     render(
       <ArenaReviewMon
         member={member}
@@ -74,27 +72,46 @@ describe('ArenaReviewMon nature cycling', () => {
       />,
     );
 
-    for (const stat of ['B', 'D', 'S']) {
-      fireEvent.click(screen.getByRole('button', { name: stat }));
+  // Stat buttons render as `C`, `C ↑` or `A ↓` depending on role.
+  const press = (label: string) =>
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}(\\s|$)`) }));
+
+  it('cycles a stat neutral -> boost -> hinder, always landing on a real nature', () => {
+    const onSave = vi.fn();
+    setup(onSave);
+    const saveAndRead = () => {
+      press('Save');
+      return onSave.mock.calls[onSave.mock.calls.length - 1][0];
+    };
+
+    // Starts Modest: +SpA / -Atk.
+    expect(saveAndRead()).toMatchObject({ nature: 'Modest (+SPA, -ATK)' });
+
+    // Boosting Def pairs it with the dump stat rather than leaving Def boosted alone.
+    press('B');
+    expect(saveAndRead()).toMatchObject({ nature: 'Bold (+DEF, -ATK)' });
+
+    // Atk is the hindered stat here, so it cycles back to neutral — clearing both halves.
+    press('A');
+    expect(saveAndRead()).toMatchObject({ nature: 'Hardy' });
+
+    // Pressing it again boosts Atk, dumping SpA.
+    press('A');
+    expect(saveAndRead()).toMatchObject({ nature: 'Adamant (+ATK, -SPA)' });
+  });
+
+  it('never produces a half-set nature, whichever stats are pressed', () => {
+    const onSave = vi.fn();
+    setup(onSave);
+
+    // A lone boost renders x1.1 in the stat display while the damage engine reads neutral.
+    // No sequence of presses may reach that state.
+    for (const stat of ['A', 'B', 'C', 'D', 'S', 'A', 'C', 'B', 'S', 'D']) {
+      press(stat);
+      press('Save');
+      const cfg = onSave.mock.calls[onSave.mock.calls.length - 1][0];
+      const { boostedStat, hinderedStat } = getNatureStats(cfg.nature);
+      expect(Boolean(boostedStat)).toBe(Boolean(hinderedStat));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: 'atk',
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: /^A/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: null,
-    }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'A' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({
-      boostedStat: 'spa',
-      hinderedStat: 'atk',
-    }));
   });
 });

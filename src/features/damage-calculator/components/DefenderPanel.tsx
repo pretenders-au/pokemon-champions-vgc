@@ -39,8 +39,6 @@ export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, m
       onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side, nature } })}
       onApplySpread={(spread) => onApplySpread(side, spread)}
       onResetBuild={() => onResetBuild(side)}
-      boostedStat={state[side].boostedStat}
-      hinderedStat={state[side].hinderedStat}
       onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side, stat, mod } })}
       stages={state[side].stages}
       onStageChange={(stat, val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side, stat, val } })}

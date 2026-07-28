@@ -49,23 +49,45 @@ const NATURE_STATS_MAP: Record<string, { boosted: string; hindered: string }> = 
   Naive: { boosted: "SPE", hindered: "SPD" },
 };
 
-export const getNatureStats = (nature: string): { boostedStat: string | null; hinderedStat: string | null } => {
-  if (!nature) return { boostedStat: null, hinderedStat: null };
-  const realNature = nature.split(' (')[0].trim().toLowerCase();
-  
-  const entry = Object.entries(NATURE_STATS_MAP).find(
-    ([key]) => key.toLowerCase() === realNature
-  );
+/** The neutral nature. Five names are neutral; this is the one we produce. */
+export const NEUTRAL_NATURE = 'Hardy';
 
-  if (entry) {
-    const stats = entry[1];
-    return { boostedStat: stats.boosted.toLowerCase(), hinderedStat: stats.hindered.toLowerCase() };
-  }
-  return { boostedStat: null, hinderedStat: null };
+const BY_BARE_NAME = new Map(
+  Object.entries(NATURE_STATS_MAP).map(([name, stats]) => [name.toLowerCase(), stats])
+);
+
+/**
+ * The bare name, as @smogon/calc and Showdown spell it — `NATURES` carries a decorated
+ * display form ("Adamant (+ATK, -SPA)").
+ */
+export const bareNature = (nature: string): string => nature.split(' (')[0].trim();
+
+/** The stat conventionally dumped when tuning `stat` — Atk, or SpA when tuning Atk. */
+const dumpStatFor = (stat: string): string => (stat === 'atk' ? 'spa' : 'atk');
+
+/**
+ * The multiplier a nature applies to one stat. The single source of truth: the stat
+ * display and the damage engine both read this, so they cannot disagree.
+ *
+ * A nature is a boost+hinder PAIR. Anything that isn't a real nature — an empty string,
+ * an unknown name, or one of the five neutral natures — is 1.0 across the board.
+ */
+export const natureMultiplier = (nature: string, stat: string): number => {
+  const entry = BY_BARE_NAME.get(bareNature(nature).toLowerCase());
+  if (!entry) return 1.0;
+  const s = stat.toUpperCase();
+  return entry.boosted === s ? 1.1 : entry.hindered === s ? 0.9 : 1.0;
+};
+
+export const getNatureStats = (nature: string): { boostedStat: string | null; hinderedStat: string | null } => {
+  const entry = BY_BARE_NAME.get(bareNature(nature).toLowerCase());
+  return entry
+    ? { boostedStat: entry.boosted.toLowerCase(), hinderedStat: entry.hindered.toLowerCase() }
+    : { boostedStat: null, hinderedStat: null };
 };
 
 export const getNatureFromStats = (boostedStat: string | null, hinderedStat: string | null): string => {
-  if (!boostedStat || !hinderedStat || boostedStat === hinderedStat) return "Hardy";
+  if (!boostedStat || !hinderedStat || boostedStat === hinderedStat) return NEUTRAL_NATURE;
   
   const b = boostedStat.toUpperCase();
   const h = hinderedStat.toUpperCase();
@@ -76,24 +98,57 @@ export const getNatureFromStats = (boostedStat: string | null, hinderedStat: str
     }
   }
   
-  return "Hardy";
+  return NEUTRAL_NATURE;
 };
 
 /**
- * Nature name for a per-stat 3-way wheel: target 0 = hinder, 1 = neutral, 2 = boost.
- * A champions nature is a boost+hinder PAIR — a lone boost has no real nature and the
- * damage engine ignores it. Pair the tuned stat with the conventional dump stat
- * (Atk, or SpA when tuning Atk) so it maps to a real nature (↑SpA → Modest, ↑Def → Bold).
+ * Nature naming the result of putting `stat` at a wheel position: 0 = hinder, 1 = neutral,
+ * 2 = boost.
+ *
+ * A nature is a boost+hinder PAIR, so setting one half needs the other. An existing opposite
+ * half is kept — tuning Def while SpA is already dumped gives Impish, not Bold — and only when
+ * there is none do we fall back to the conventional dump stat.
  */
-export const natureForStatWheel = (stat: string, target: number): string => {
-  const partner = stat === 'atk' ? 'spa' : 'atk';
-  const boosted = target === 2 ? stat : target === 0 ? partner : null;
-  const hindered = target === 2 ? partner : target === 0 ? stat : null;
-  return getNatureFromStats(boosted, hindered);
+export const natureForStatWheel = (nature: string, stat: string, target: number): string => {
+  if (target === 1) return NEUTRAL_NATURE;
+  const { boostedStat: boost, hinderedStat: hinder } = getNatureStats(nature);
+  const partner = dumpStatFor(stat);
+  return target === 2
+    ? getNatureFromStats(stat, hinder && hinder !== stat ? hinder : partner)
+    : getNatureFromStats(boost && boost !== stat ? boost : partner, stat);
+};
+
+/** Where `stat` currently sits on that wheel: 0 = hindered, 1 = neutral, 2 = boosted. */
+export const natureWheelIndex = (nature: string, stat: string): number => {
+  const m = natureMultiplier(nature, stat);
+  return m > 1 ? 2 : m < 1 ? 0 : 1;
+};
+
+/**
+ * Apply one `+`/`-` press. Pressing the stat that is already set returns to neutral;
+ * otherwise this is the wheel move to that position, so both editing surfaces agree.
+ */
+export const toggleNature = (nature: string, stat: string, mod: '+' | '-'): string => {
+  const { boostedStat: boost, hinderedStat: hinder } = getNatureStats(nature);
+  if (mod === '+') return boost === stat ? NEUTRAL_NATURE : natureForStatWheel(nature, stat, 2);
+  return hinder === stat ? NEUTRAL_NATURE : natureForStatWheel(nature, stat, 0);
+};
+
+/** Single-letter stat labels used across the Arena cards (H/A/B/C/D/S). */
+export const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
+
+/**
+ * Compact arrow form for a card, e.g. "↑C ↓A". Neutral natures have no pair to point at,
+ * so they show their name instead.
+ */
+export const natureArrows = (nature: string): string => {
+  const { boostedStat: up, hinderedStat: down } = getNatureStats(nature);
+  if (!up || !down) return getFormattedNature(nature);
+  return `↑${STAT_SHORT[up] ?? up} ↓${STAT_SHORT[down] ?? down}`;
 };
 
 export const getFormattedNature = (nature: string): string => {
-  if (!nature) return "Hardy";
-  const baseName = nature.split(' (')[0].trim().toLowerCase();
-  return NATURES.find(n => n.toLowerCase().startsWith(baseName)) || nature.split(' (')[0].trim();
+  if (!nature) return NEUTRAL_NATURE;
+  const base = bareNature(nature);
+  return NATURES.find(n => n.toLowerCase().startsWith(base.toLowerCase())) || base;
 };

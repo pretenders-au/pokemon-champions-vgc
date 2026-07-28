@@ -13,6 +13,7 @@ import { ArenaReviewMon } from './ArenaReviewMon';
 import { useViewportMode } from '@/hooks/useViewportMode';
 import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
 import { pokemonRepository } from '@/db/repositories/pokemon.repo';
+import { natureArrows, NEUTRAL_NATURE } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface ArenaAddTeamProps {
   pokemonList: PokemonBaseStats[];
@@ -37,7 +38,6 @@ const METHODS: { key: Method; label: string }[] = [
 const SP_FIELDS: [keyof PokemonConfig, string][] = [
   ['spHp', 'H'], ['spAtk', 'A'], ['spDef', 'B'], ['spSpa', 'C'], ['spSpd', 'D'], ['spSpe', 'S'],
 ];
-const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
 
 function typeChip(type: string): React.CSSProperties {
   const c = `var(--type-${type})`;
@@ -107,7 +107,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
       baseHp: p.baseHp, baseAtk: p.baseAttack, baseDef: p.baseDefense,
       baseSpa: p.baseSpAtk, baseSpd: p.baseSpDef, baseSpe: p.baseSpeed,
       spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-      nature: 'Hardy', boostedStat: null, hinderedStat: null,
+      nature: NEUTRAL_NATURE,
       moves: [null, null, null, null], activeMoveIndex: 0,
       abilities, activeAbility: abilities[0] ?? null,
       item: null, hpPercent: 100, isTypeOverridden: false,
@@ -229,9 +229,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
               <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 9 }}>
                 {displayConfigs.map((cfg, i) => {
                   const isEdited = edited[i] != null;
-                  const natureStr = cfg.boostedStat && cfg.hinderedStat && cfg.boostedStat !== cfg.hinderedStat
-                    ? `↑${STAT_SHORT[cfg.boostedStat] ?? cfg.boostedStat} ↓${STAT_SHORT[cfg.hinderedStat] ?? cfg.hinderedStat}`
-                    : cfg.nature;
+                  const natureStr = natureArrows(cfg.nature);
                   const spStr = SP_FIELDS.filter(([k]) => (cfg[k] as number) > 0).map(([k, l]) => `${l} ${cfg[k]}`).join(' · ');
                   return (
                     <div key={i} style={{ position: 'relative', minWidth: 0 }}>

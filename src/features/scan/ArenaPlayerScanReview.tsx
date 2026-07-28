@@ -8,7 +8,7 @@ import { filePickerSource, cameraSource, type CaptureSource, type CaptureSourceK
 import CropStep from './CropStep';
 import PokemonImagePicker from './PokemonImagePicker';
 import { loadClassifier } from './classifier';
-import { getFormattedNature, getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
+import { natureArrows } from '@/features/pokemon/utils/pokemon-natures';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { ArenaReviewMon } from '@/features/teams/components/mobile/ArenaReviewMon';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
@@ -18,7 +18,6 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { PlayerScreenKind } from './playerTypes';
 
 const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
-const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
 const SOURCE_LABEL: Record<CaptureSourceKind, string> = { file: 'Add screenshot', camera: 'Take photo', mediaProjection: 'Scan this screen' };
 const DEFAULT_SOURCES: CaptureSource[] = [filePickerSource, cameraSource];
 
@@ -214,10 +213,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemon
               const name = e.speciesId != null ? base?.nameEn ?? 'Unknown' : '—';
               const spStr = e.sp.map((v, i) => (v > 0 ? `${SP_SHORT[i]} ${v}` : null)).filter(Boolean).join(' · ');
               const hasStats = s.statReads.length > 0;
-              const nat = getNatureStats(e.nature);
-              const natureStr = nat.boostedStat && nat.hinderedStat && nat.boostedStat !== nat.hinderedStat
-                ? `↑${STAT_SHORT[nat.boostedStat] ?? nat.boostedStat} ↓${STAT_SHORT[nat.hinderedStat] ?? nat.hinderedStat}`
-                : getFormattedNature(e.nature);
+              const natureStr = natureArrows(e.nature);
               return (
                 <button key={s.slot} onClick={() => setOpenSlot(s.slot)} style={glanceCard(flagged)}>
                   {/* sprite + name + types + confidence badge */}

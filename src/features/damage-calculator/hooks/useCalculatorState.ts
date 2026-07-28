@@ -1,7 +1,7 @@
 import { useReducer } from 'react';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { getNatureFromStats, getFormattedNature, toggleNature } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
@@ -21,8 +21,6 @@ export interface SideState {
   spSpa: number;
   spSpd: number;
   spSpe: number;
-  boostedStat: string | null;
-  hinderedStat: string | null;
   nature: string;
   stages: Record<string, number>;
   moves: (MoveData | null)[];
@@ -83,13 +81,13 @@ export type SideAction =
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
   | { type: 'TOGGLE_AEGISLASH_FORM', payload: { side: 'p1' | 'p2' } }
-  | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any } }
   | { type: 'APPLY_SPREAD', payload: { side: 'p1' | 'p2', sp: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }, nature: string } }
   | { type: 'APPLY_SAVED_BUILD', payload: { side: 'p1' | 'p2', build: import('../utils/build-store').SavedBuild } }
   | { type: 'SET_SCAN_LOADED', payload: { side: 'p1' | 'p2', val: boolean } }
   | { type: 'RESET_BUILD', payload: { side: 'p1' | 'p2' } }
-  | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any } }
+  | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[] } }
   | { type: 'SET_FAINTED_COUNT', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'RESET_STATS', payload: { side: 'p1' | 'p2' } };
 
@@ -109,8 +107,6 @@ export const initialSide: SideState = {
   type2: null,
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-  boostedStat: null,
-  hinderedStat: null,
   nature: 'Hardy',
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moves: [null, null, null, null],
@@ -151,13 +147,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       return { ...state, item: action.payload.item };
     }
     case 'SET_NATURE': {
-      const stats = getNatureStats(action.payload.nature);
-      return { 
-        ...state, 
-        nature: action.payload.nature, 
-        boostedStat: stats.boostedStat, 
-        hinderedStat: stats.hinderedStat 
-      };
+      return { ...state, nature: action.payload.nature };
     }
     case 'TOGGLE_SIDE_EFFECT': {
       const { effect } = action.payload;
@@ -181,27 +171,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
     }
     case 'TOGGLE_NATURE': {
       const { stat, mod } = action.payload;
-      let newBoosted = state.boostedStat;
-      let newHindered = state.hinderedStat;
-
-      if (mod === '+') {
-        if (newBoosted === stat) {
-          newBoosted = null;
-        } else {
-          newBoosted = stat;
-          if (newHindered === stat) newHindered = null;
-        }
-      } else {
-        if (newHindered === stat) {
-          newHindered = null;
-        } else {
-          newHindered = stat;
-          if (newBoosted === stat) newBoosted = null;
-        }
-      }
-
-      const newNature = getNatureFromStats(newBoosted, newHindered);
-      return { ...state, boostedStat: newBoosted, hinderedStat: newHindered, nature: newNature };
+      return { ...state, nature: toggleNature(state.nature, stat, mod) };
     }
     case 'SET_STAT_STAGE': {
       const { stat, val } = action.payload;
@@ -221,21 +191,19 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
     }
     case 'APPLY_SPREAD': {
       const { sp, nature } = action.payload;
-      const stats = getNatureStats(nature);
       return {
         ...state,
         spHp: sp.hp, spAtk: sp.atk, spDef: sp.def, spSpa: sp.spa, spSpd: sp.spd, spSpe: sp.spe,
-        nature, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat,
+        nature,
       };
     }
     case 'APPLY_SAVED_BUILD': {
       const { build } = action.payload;
-      const stats = getNatureStats(build.nature);
       return {
         ...state,
         spHp: build.sp.hp, spAtk: build.sp.atk, spDef: build.sp.def,
         spSpa: build.sp.spa, spSpd: build.sp.spd, spSpe: build.sp.spe,
-        nature: build.nature, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat,
+        nature: build.nature,
         activeAbility: build.ability, item: build.item,
       };
     }
@@ -246,7 +214,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       return {
         ...state,
         spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-        nature: 'Hardy', boostedStat: null, hinderedStat: null,
+        nature: 'Hardy',
         item: null, loadedFromScan: false,
       };
     }
@@ -283,8 +251,6 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
         spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-        boostedStat: null,
-        hinderedStat: null,
         stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         moves: [null, null, null, null],
         activeMoveIndex: 0,
@@ -349,7 +315,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       return { ...state, isTypeOverridden: !state.isTypeOverridden };
     }
     case 'APPLY_PRESET': {
-      const { pokemon: p, abilities, movesData, preset, natureStats } = action.payload;
+      const { pokemon: p, abilities, movesData, preset } = action.payload;
       return {
         ...initialSide,
         selectedId: p.id,
@@ -361,8 +327,6 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
         stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         moves: movesData,
         activeMoveIndex: 0,
@@ -382,7 +346,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       };
     }
     case 'IMPORT_SHOWDOWN_SET': {
-      const { pokemon: p, abilities, movesData, set, natureStats } = action.payload;
+      const { pokemon: p, abilities, movesData, set } = action.payload;
       return {
         ...initialSide,
         selectedId: p.id,
@@ -394,8 +358,6 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
         stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         moves: movesData,
         activeMoveIndex: 0,
@@ -415,7 +377,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       };
     }
     case 'LOAD_CONFIG': {
-      const { config, pokemon: p, abilities, movesData, natureStats } = action.payload;
+      const { config, pokemon: p, abilities, movesData } = action.payload;
       const baseAtk = config.baseAtk ?? p.baseAttack;
       const baseDef = config.baseDef ?? p.baseDefense;
       const baseSpa = config.baseSpa ?? p.baseSpAtk;
@@ -432,8 +394,6 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         baseSpa,
         baseSpd,
         baseSpe: config.baseSpe ?? p.baseSpeed,
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
         stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         moves: movesData,
         activeMoveIndex: 0,

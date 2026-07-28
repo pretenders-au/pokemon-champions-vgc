@@ -3,7 +3,7 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { matchSpecies, matchAbility, matchItem, matchMove, type MatchResult } from '@/features/pokemon/utils/showdown-matcher';
-import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 
 /**
  * Set resolution — match a parsed Showdown set against the dex.
@@ -51,7 +51,6 @@ export interface Resolved {
   item: string | null;
   /** Always four slots. */
   movesData: (MoveData | null)[];
-  natureStats: { boostedStat: string | null; hinderedStat: string | null };
 }
 
 /**
@@ -143,7 +142,6 @@ function resolveMatched(
       activeAbility,
       item,
       movesData: movesData.slice(0, 4),
-      natureStats: getNatureStats(set.nature),
     },
     corrections,
     errors,
@@ -176,7 +174,7 @@ export async function resolveSet(set: ParsedShowdownSet, dex: Dex): Promise<Reso
 
 /** Assemble a Pokémon config from a set and its resolution. */
 export function toConfig(set: ParsedShowdownSet, resolved: Resolved): PokemonConfig {
-  const { pokemon: p, natureStats } = resolved;
+  const { pokemon: p } = resolved;
   return {
     selectedId: p.id,
     type1: p.type1,
@@ -194,8 +192,6 @@ export function toConfig(set: ParsedShowdownSet, resolved: Resolved): PokemonCon
     spSpd: set.evs.spd,
     spSpe: set.evs.spe,
     nature: getFormattedNature(set.nature),
-    boostedStat: natureStats.boostedStat,
-    hinderedStat: natureStats.hinderedStat,
     moves: resolved.movesData,
     activeMoveIndex: 0,
     abilities: resolved.abilityNames,

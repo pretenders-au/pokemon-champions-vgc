@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
-import { getNatureStats, NATURES, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { NATURES, getNatureFromStats, getFormattedNature, toggleNature } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
 export interface PokemonConfig {
@@ -25,8 +25,6 @@ export interface PokemonConfig {
   spSpd: number;
   spSpe: number;
   nature: string;
-  boostedStat: string | null;
-  hinderedStat: string | null;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
   abilities: string[];
@@ -52,8 +50,8 @@ type PokemonAction =
   | { type: 'SET_TYPE', payload: { slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE' }
   | { type: 'TOGGLE_AEGISLASH_FORM' }
-  | { type: 'APPLY_PRESET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'IMPORT_SHOWDOWN_SET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'APPLY_PRESET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any } }
+  | { type: 'IMPORT_SHOWDOWN_SET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any } }
   | { type: 'LOAD_CONFIG', payload: PokemonConfig }
   | { type: 'RESET_STATS' };
 
@@ -64,8 +62,6 @@ const initialPokemonState: PokemonConfig = {
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   nature: 'Hardy',
-  boostedStat: null,
-  hinderedStat: null,
   moves: [null, null, null, null],
   activeMoveIndex: 0,
   abilities: [],
@@ -77,9 +73,7 @@ const initialPokemonState: PokemonConfig = {
 
 export const AEGISLASH_ID = 681;
 
-import { useStatEngine } from '@/features/pokemon/hooks/useStatEngine';
 
-const statEngine = useStatEngine();
 
 function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonConfig {
   switch (action.type) {
@@ -88,18 +82,11 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
       return { ...state, [key]: Math.max(0, Math.min(32, val)) };
     }
     case 'SET_NATURE': {
-      const stats = statEngine.getStatsForNature(action.payload);
-      return { 
-        ...state, 
-        nature: action.payload, 
-        boostedStat: stats.boostedStat, 
-        hinderedStat: stats.hinderedStat 
-      };
+      return { ...state, nature: action.payload };
     }
     case 'TOGGLE_NATURE': {
       const { stat, mod } = action.payload;
-      const stats = statEngine.calculateNatureToggle(state.boostedStat, state.hinderedStat, stat, mod);
-      return { ...state, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat, nature: stats.nature };
+      return { ...state, nature: toggleNature(state.nature, stat, mod) };
     }
     case 'SELECT_POKEMON': {
       const { pokemon: p } = action.payload;
@@ -114,8 +101,6 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
-        boostedStat: null,
-        hinderedStat: null,
         nature: 'Hardy',
         moves: [null, null, null, null],
         activeMoveIndex: 0,
@@ -184,7 +169,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
       };
     }
     case 'APPLY_PRESET': {
-      const { pokemon: p, abilities, movesData, preset, natureStats } = action.payload;
+      const { pokemon: p, abilities, movesData, preset } = action.payload;
       return {
         ...state,
         selectedId: p.id,
@@ -196,8 +181,6 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
         nature: getFormattedNature(preset.nature),
         moves: movesData,
         activeMoveIndex: 0,
@@ -215,7 +198,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
       };
     }
     case 'IMPORT_SHOWDOWN_SET': {
-      const { pokemon: p, abilities, movesData, set, natureStats } = action.payload;
+      const { pokemon: p, abilities, movesData, set } = action.payload;
       return {
         ...state,
         selectedId: p.id,
@@ -227,8 +210,6 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
         nature: getFormattedNature(set.nature),
         moves: movesData,
         activeAbility: set.ability && abilities.includes(set.ability) ? set.ability : (abilities[0] || null),
@@ -308,7 +289,6 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     }
 
     const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
-    const natureStats = getNatureStats(preset.nature);
 
     while (movesData.length < 4) {
       movesData.push(null);
@@ -320,8 +300,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
         pokemon: p,
         abilities: abilityNames,
         movesData: movesData.slice(0, 4),
-        preset,
-        natureStats
+        preset
       }
     });
   }, []);
@@ -368,7 +347,6 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
 
     const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
     while (movesData.length < 4) movesData.push(null);
-    const natureStats = getNatureStats(set.nature);
 
     dispatch({
       type: 'IMPORT_SHOWDOWN_SET',
@@ -376,8 +354,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
         pokemon: p,
         abilities: abilityNames,
         movesData: movesData.slice(0, 4),
-        set,
-        natureStats
+        set
       }
     });
   }, []);

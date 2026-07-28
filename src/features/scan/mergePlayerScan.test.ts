@@ -3,6 +3,7 @@ import { solveStatRow, mergePlayerScan, buildConfigs, pickLang } from './mergePl
 import { championsStat } from '@/features/pokemon/utils/champions-stats';
 import type { PlayerScanVocab } from '@/db/repositories/scan.repo';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 
 describe('solveStatRow', () => {
   it('exhaustive: unique multiplier recovered for every base/sp/nature combo', () => {
@@ -56,11 +57,11 @@ describe('nature derivation via merge', () => {
     expect(merged.slots[0].nature.name).toContain('Adamant');
     expect(merged.slots[0].nature.confident).toBe(true);
   });
-  it('no arrows and all-neutral math = Serious', () => {
+  it('no arrows and all-neutral math = neutral', () => {
     const neutral = { ...statsScan, panels: [{ ...statsScan.panels[0], rows: [
       { stat: 179, sp: 4, arrow: null }, mkRow(1), mkRow(1), mkRow(1), mkRow(1), mkRow(1) ] }] };
     const merged = mergePlayerScan(null, neutral, new Map([[1, bases]]));
-    expect(merged.slots[0].nature.name).toContain('Serious');
+    expect(merged.slots[0].nature.name).toContain('Hardy');
   });
 });
 
@@ -123,8 +124,7 @@ describe('buildConfigs', () => {
     expect(c.spAtk).toBe(4);
     expect(c.spSpa).toBe(4);
     expect(c.nature).toContain('Adamant');
-    expect(c.boostedStat).toBe('atk');
-    expect(c.hinderedStat).toBe('spa');
+    expect(getNatureStats(c.nature)).toEqual({ boostedStat: 'atk', hinderedStat: 'spa' });
     expect(c.moves.map(m => m?.nameEn ?? null)).toEqual(['Pound', 'Protect', null, null]);
     expect(c.activeAbility).toBe('Static');
     expect(c.item).toBe('Leftovers');

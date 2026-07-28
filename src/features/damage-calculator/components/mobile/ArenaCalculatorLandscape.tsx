@@ -9,7 +9,7 @@ import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/
 import { buildSpeedCompare, speedFormula } from '@/features/damage-calculator/utils/speed';
 import { megaCycleTarget } from '@/features/damage-calculator/utils/mega';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { natureForStatWheel } from '@/features/pokemon/utils/pokemon-natures';
+import { natureForStatWheel, natureWheelIndex } from '@/features/pokemon/utils/pokemon-natures';
 import { Sprite, KOVerdict, koVerdictFromText, Icon, TypeBadge, WheelPicker, SP_OPTIONS, RANK_OPTIONS, NATURE_OPTIONS } from '@/design-system/arena';
 import type { KoTone } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
@@ -201,7 +201,7 @@ export function ArenaCalculatorLandscape({
   const speed = buildSpeedCompare(
     {
       baseSpe: state[dir].baseSpe, spSpe: state[dir].spSpe,
-      boostedStat: state[dir].boostedStat, hinderedStat: state[dir].hinderedStat,
+      nature: state[dir].nature,
       speStage: state[dir].stages.spe || 0, item: state[dir].item, isTailwind: state[dir].isTailwind,
     },
     { baseSpe: state[defDir].baseSpe, speStage: state[defDir].stages.spe || 0, isTailwind: state[defDir].isTailwind },
@@ -219,10 +219,10 @@ export function ArenaCalculatorLandscape({
   const p2RankStat = p1MoveIsPhysical ? 'def' : 'spd';
 
   // Nature wheel: index 0 = hinder, 1 = neutral, 2 = boost, for one stat.
-  const natIdx = (s: SideState, stat: string) => (s.boostedStat === stat ? 2 : s.hinderedStat === stat ? 0 : 1);
+  const natIdx = (s: SideState, stat: string) => natureWheelIndex(s.nature, stat);
   const setNatureWheel = (side: Side, stat: string, target: number) => {
     if (target === natIdx(state[side], stat)) return;
-    dispatch({ type: 'SET_NATURE', payload: { side, nature: natureForStatWheel(stat, target) } });
+    dispatch({ type: 'SET_NATURE', payload: { side, nature: natureForStatWheel(state[side].nature, stat, target) } });
   };
   const stepHp = (delta: number) =>
     dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, Math.min(100, state.p2.hpPercent + delta)) } });

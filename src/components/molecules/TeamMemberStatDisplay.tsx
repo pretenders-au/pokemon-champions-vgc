@@ -1,6 +1,7 @@
 import React from 'react';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { calculateHP, calculateStat } from '@/features/damage-calculator/utils/damage-calc';
+import { natureMultiplier, natureWheelIndex } from '@/features/pokemon/utils/pokemon-natures';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
@@ -20,11 +21,11 @@ const StatRow = ({ label, base, sp, total, isBoosted, isHindered }: { label: str
 
 const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config, pokemonList }) => {
   const hpTotal = calculateHP(config.baseHp, config.spHp);
-  const atkTotal = calculateStat(config.baseAtk, config.spAtk, config.boostedStat === 'atk' ? 1.1 : config.hinderedStat === 'atk' ? 0.9 : 1.0, 0, 1.0);
-  const defTotal = calculateStat(config.baseDef, config.spDef, config.boostedStat === 'def' ? 1.1 : config.hinderedStat === 'def' ? 0.9 : 1.0, 0, 1.0);
-  const spaTotal = calculateStat(config.baseSpa, config.spSpa, config.boostedStat === 'spa' ? 1.1 : config.hinderedStat === 'spa' ? 0.9 : 1.0, 0, 1.0);
-  const spdTotal = calculateStat(config.baseSpd, config.spSpd, config.boostedStat === 'spd' ? 1.1 : config.hinderedStat === 'spd' ? 0.9 : 1.0, 0, 1.0);
-  const speTotal = calculateStat(config.baseSpe, config.spSpe, config.boostedStat === 'spe' ? 1.1 : config.hinderedStat === 'spe' ? 0.9 : 1.0, 0, 1.0);
+  const atkTotal = calculateStat(config.baseAtk, config.spAtk, natureMultiplier(config.nature, 'atk'), 0, 1.0);
+  const defTotal = calculateStat(config.baseDef, config.spDef, natureMultiplier(config.nature, 'def'), 0, 1.0);
+  const spaTotal = calculateStat(config.baseSpa, config.spSpa, natureMultiplier(config.nature, 'spa'), 0, 1.0);
+  const spdTotal = calculateStat(config.baseSpd, config.spSpd, natureMultiplier(config.nature, 'spd'), 0, 1.0);
+  const speTotal = calculateStat(config.baseSpe, config.spSpe, natureMultiplier(config.nature, 'spe'), 0, 1.0);
 
   const totalSp = config.spHp + config.spAtk + config.spDef + config.spSpa + config.spSpd + config.spSpe;
   const isOverLimit = totalSp > 66;
@@ -39,11 +40,11 @@ const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config, p
       </div>
       <div className="space-y-0.5">
         <StatRow label="HP" base={config.baseHp} sp={config.spHp} total={hpTotal} />
-        <StatRow label="Atk" base={config.baseAtk} sp={config.spAtk} total={atkTotal} isBoosted={config.boostedStat === 'atk'} isHindered={config.hinderedStat === 'atk'} />
-        <StatRow label="Def" base={config.baseDef} sp={config.spDef} total={defTotal} isBoosted={config.boostedStat === 'def'} isHindered={config.hinderedStat === 'def'} />
-        <StatRow label="SpA" base={config.baseSpa} sp={config.spSpa} total={spaTotal} isBoosted={config.boostedStat === 'spa'} isHindered={config.hinderedStat === 'spa'} />
-        <StatRow label="SpD" base={config.baseSpd} sp={config.spSpd} total={spdTotal} isBoosted={config.boostedStat === 'spd'} isHindered={config.hinderedStat === 'spd'} />
-        <StatRow label="Spe" base={config.baseSpe} sp={config.spSpe} total={speTotal} isBoosted={config.boostedStat === 'spe'} isHindered={config.hinderedStat === 'spe'} />
+        <StatRow label="Atk" base={config.baseAtk} sp={config.spAtk} total={atkTotal} isBoosted={natureWheelIndex(config.nature, 'atk') === 2} isHindered={natureWheelIndex(config.nature, 'atk') === 0} />
+        <StatRow label="Def" base={config.baseDef} sp={config.spDef} total={defTotal} isBoosted={natureWheelIndex(config.nature, 'def') === 2} isHindered={natureWheelIndex(config.nature, 'def') === 0} />
+        <StatRow label="SpA" base={config.baseSpa} sp={config.spSpa} total={spaTotal} isBoosted={natureWheelIndex(config.nature, 'spa') === 2} isHindered={natureWheelIndex(config.nature, 'spa') === 0} />
+        <StatRow label="SpD" base={config.baseSpd} sp={config.spSpd} total={spdTotal} isBoosted={natureWheelIndex(config.nature, 'spd') === 2} isHindered={natureWheelIndex(config.nature, 'spd') === 0} />
+        <StatRow label="Spe" base={config.baseSpe} sp={config.spSpe} total={speTotal} isBoosted={natureWheelIndex(config.nature, 'spe') === 2} isHindered={natureWheelIndex(config.nature, 'spe') === 0} />
       </div>
       <div className="flex justify-between items-center pt-2 border-t border-line mt-1">
         <span className="text-[8px] font-black text-ink-4 uppercase tracking-tighter">Total SP</span>

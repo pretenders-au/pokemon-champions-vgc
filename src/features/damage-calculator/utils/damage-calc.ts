@@ -1,4 +1,5 @@
 import { calculate, Pokemon, Move, Field, Generations, Result } from '@smogon/calc';
+import { bareNature } from '@/features/pokemon/utils/pokemon-natures';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
 
 /**
@@ -65,21 +66,6 @@ export const getModifiedMoveType = (
 
   return originalType;
 };
-
-export const getNatureName = (boosted: string | null, hindered: string | null): string => {
-  if (!boosted || !hindered || boosted === hindered) return 'Serious';
-  
-  const natures: Record<string, Record<string, string>> = {
-    atk: { def: 'Lonely', spa: 'Adamant', spd: 'Naughty', spe: 'Brave' },
-    def: { atk: 'Bold', spa: 'Impish', spd: 'Lax', spe: 'Relaxed' },
-    spa: { atk: 'Modest', def: 'Mild', spd: 'Rash', spe: 'Quiet' },
-    spd: { atk: 'Calm', def: 'Gentle', spa: 'Careful', spe: 'Sassy' },
-    spe: { atk: 'Timid', def: 'Hasty', spa: 'Jolly', spd: 'Naive' }
-  };
-  
-  return natures[boosted]?.[hindered] || 'Serious';
-};
-
 
 export const getStatModifier = (
   ability: string | null,
@@ -243,7 +229,7 @@ export const mapToSmogonPokemon = (
     level: 50,
     ability: calcAbility || undefined,
     item: stateSide.item || undefined,
-    nature: getNatureName(stateSide.boostedStat, stateSide.hinderedStat) as any,
+    nature: bareNature(stateSide.nature) as any,
     evs,
     ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
     boosts,

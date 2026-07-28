@@ -195,8 +195,9 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('player scan end-to-end', () => {
         expect([cfg.spHp, cfg.spAtk, cfg.spDef, cfg.spSpa, cfg.spSpd, cfg.spSpe], `slot ${i + 1} sp`).toEqual(want.sp);
         expect(cfg.nature, `slot ${i + 1} nature`).toBe(getFormattedNature(want.nature));
         const ns = getNatureStats(want.nature);
-        expect(cfg.boostedStat, `slot ${i + 1} boosted stat`).toBe(ns.boostedStat);
-        expect(cfg.hinderedStat, `slot ${i + 1} hindered stat`).toBe(ns.hinderedStat);
+        const cfgNature = getNatureStats(cfg.nature);
+        expect(cfgNature.boostedStat, `slot ${i + 1} boosted stat`).toBe(ns.boostedStat);
+        expect(cfgNature.hinderedStat, `slot ${i + 1} hindered stat`).toBe(ns.hinderedStat);
       });
     }, 600_000);
   }

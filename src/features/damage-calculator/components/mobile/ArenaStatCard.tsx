@@ -2,9 +2,9 @@ import React from 'react';
 import type { SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
 import { calculateStat, calculateHP } from '@/features/damage-calculator/utils/damage-calc';
 import { Sprite, TypeBadge } from '@/design-system/arena';
+import { natureMultiplier } from '@/features/pokemon/utils/pokemon-natures';
 
-const natureMult = (s: SideState, stat: string) =>
-  s.boostedStat === stat ? 1.1 : s.hinderedStat === stat ? 0.9 : 1.0;
+const natureMult = (s: SideState, stat: string) => natureMultiplier(s.nature, stat);
 
 /** Computed stat rows laid out H/C, A/D, B/S (design order). */
 export function computeStatRows(s: SideState): { l1: string; v1: number; l2: string; v2: number }[] {

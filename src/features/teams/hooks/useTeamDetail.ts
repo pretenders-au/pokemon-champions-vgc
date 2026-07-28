@@ -93,8 +93,6 @@ export function useTeamDetail(id: string | undefined) {
       baseSpe: p.baseSpeed,
       spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
       nature: 'Hardy',
-      boostedStat: null,
-      hinderedStat: null,
       moves: [null, null, null, null],
       activeMoveIndex: 0,
       abilities: abilityNames,

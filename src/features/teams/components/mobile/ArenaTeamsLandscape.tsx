@@ -4,6 +4,7 @@ import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { natureArrows } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface ArenaTeamsLandscapeProps {
   teams: TeamWithMembers[];
@@ -18,7 +19,6 @@ export interface ArenaTeamsLandscapeProps {
   focusId?: string | null;    // team to select after a create
 }
 
-const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
 const SP_FIELDS: [keyof PokemonConfig, string][] = [
   ['spHp', 'H'], ['spAtk', 'A'], ['spDef', 'B'], ['spSpa', 'C'], ['spSpd', 'D'], ['spSpe', 'S'],
 ];
@@ -169,9 +169,7 @@ export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
                     }
                     const c = m.configuration;
                     const { hasStats, hasMoves } = memberFlags(c);
-                    const natureStr = c.boostedStat && c.hinderedStat && c.boostedStat !== c.hinderedStat
-                      ? `↑${STAT_SHORT[c.boostedStat] ?? c.boostedStat} ↓${STAT_SHORT[c.hinderedStat] ?? c.hinderedStat}`
-                      : c.nature;
+                    const natureStr = natureArrows(c.nature);
                     const spStr = SP_FIELDS.filter(([k]) => (c[k] as number) > 0).map(([k, l]) => `${l} ${c[k]}`).join('  ·  ');
                     return (
                       <div key={i} onClick={() => onReviewMon(selected.id, m.id)} title="Review & edit" style={{ padding: '11px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-card)', border: '1px solid var(--line-1)', cursor: 'pointer' }}>
