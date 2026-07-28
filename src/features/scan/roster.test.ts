@@ -50,6 +50,17 @@ describe('manual uniqueness', () => {
 });
 
 describe('opponentIdsFromEntries', () => {
+  it('never returns the player\'s own side', () => {
+    // A team preview reports both sides, and one detecting fewer than six opponent cards
+    // leaves player slots in the first six.
+    const entries: ScanEntry[] = [
+      { id: 1, candidates: [], side: 'opponent' },
+      { id: 2, candidates: [], side: 'player' },
+      { id: 3, candidates: [] },
+    ];
+    expect(opponentIdsFromEntries(entries)).toEqual([1, 3]);
+  });
+
   it('keeps unique non-null ids and drops empty slots', () => {
     expect(opponentIdsFromEntries([entry(445), entry(null), entry(445), entry(823)])).toEqual([445, 823]);
   });

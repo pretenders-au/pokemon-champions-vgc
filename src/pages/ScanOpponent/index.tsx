@@ -23,8 +23,6 @@ import {
   type ScanEntry,
 } from '@/features/scan/roster';
 
-export { opponentIdsFromEntries, type ScanEntry } from '@/features/scan/roster';
-
 
 const micro: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)',

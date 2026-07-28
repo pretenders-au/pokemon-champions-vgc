@@ -3,7 +3,6 @@ import Modal from '@/components/atoms/Modal';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
-import type { Candidate, ScanSide } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
 import { useTeamScan, type ScanEngine } from './useTeamScan';
 import type { LegalIdsBySide } from './scanFrame';
@@ -11,7 +10,7 @@ import { loadClassifier } from './classifier';
 import { filePickerSource, cameraSource } from './captureSource';
 import { toParsedSets } from './toParsedSets';
 import { formFamilyIds, buildLegalIdsResolver } from './battleRoster';
-import { seedRoster, opponentIdsFromEntries, availableCandidatesFor, updateEntryId, LOW_CONFIDENCE, type ScanEntry } from './roster';
+import { seedRoster, opponentIdsFromEntries, availableCandidatesFor, unavailableIdsFor, updateEntryId, LOW_CONFIDENCE, type ScanEntry } from './roster';
 import CropStep from './CropStep';
 
 interface ScanTeamModalProps {
@@ -138,7 +137,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     onSaveTeam(toParsedSets(names));
   };
 
-  const confirmRosterIds = () => opponentIdsFromEntries(roster.filter((e) => e.side !== 'player'));
+  const confirmRosterIds = () => opponentIdsFromEntries(roster);
 
   const confirmRoster = () => {
     const ids = confirmRosterIds();
@@ -220,6 +219,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               .filter(({ entry }) => !(onConfirmRoster && mode !== 'battle' && entry.side === 'player'))
               .map(({ entry, i }) => {
               const selectedName = entry.id != null ? byId.get(entry.id)?.nameEn : undefined;
+              const offerable = availableCandidatesFor(roster, i);
               const isPicking = pickerOpenFor === i;
               return (
                 <div key={i} className="p-2 rounded border border-line-2">
@@ -248,9 +248,9 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   )}
                   <div className="flex-1 min-w-0">
                     {/* Recognized candidates as clickable images */}
-                    {availableCandidatesFor(roster, i).length > 0 && (
+                    {offerable.length > 0 && (
                       <div className="flex gap-2 flex-wrap">
-                        {availableCandidatesFor(roster, i).map((c) => (
+                        {offerable.map((c) => (
                           <button
                             key={c.id}
                             type="button"
@@ -326,6 +326,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                       <PokemonImagePicker
                         pokemonList={pokemonList}
                         selectedId={entry.id}
+                        disabledIds={unavailableIdsFor(roster, i)}
                         onSelect={(id) => { setEntryId(i, id); setPickerOpenFor(null); }}
                       />
                     </div>

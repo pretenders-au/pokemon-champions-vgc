@@ -3,7 +3,7 @@
 // right, pinned Confirm & save footer. Parent remounts (key) per scan.
 import React, { useMemo, useState } from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
-import { seedRoster, updateEntryId, availableCandidatesFor, opponentIdsFromEntries, LOW_CONFIDENCE, type ScanEntry } from '@/features/scan/roster';
+import { seedRoster, updateEntryId, availableCandidatesFor, unavailableIdsFor, opponentIdsFromEntries, LOW_CONFIDENCE, type ScanEntry } from '@/features/scan/roster';
 import { Icon } from '@/design-system/arena';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
@@ -43,24 +43,29 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
   const q = query.trim().toLowerCase();
   const matches = useMemo(() => {
     if (!q) return [];
+    const taken = unavailableIdsFor(entries, fixing);
     const starts: PokemonBaseStats[] = [];
     const contains: PokemonBaseStats[] = [];
     for (const p of pokemonList) {
+      if (taken.has(p.id)) continue;
       const en = p.nameEn.toLowerCase();
       if (en.startsWith(q)) starts.push(p);
       else if (en.includes(q) || (p.nameZh ?? '').includes(query.trim()) || p.identifier.includes(q)) contains.push(p);
     }
     return [...starts, ...contains].slice(0, 12);
-  }, [q, query, pokemonList]);
+  }, [q, query, pokemonList, entries, fixing]);
 
   const pickAndClear = (id: number) => { setPick(fixing, id); setQuery(''); };
   const applyTyped = () => { if (matches.length > 0) pickAndClear(matches[0].id); };
 
   const slotState = (i: number) => {
-    const top = shown[i].candidates[0];
-    const manual = entries[i].id != null && entries[i].id !== top?.id;
-    const low = !manual && (top?.score ?? 0) < LOW_CONFIDENCE;
-    return { manual, low };
+    const entry = entries[i];
+    // Score the candidate actually selected, not the raw top one: a slot re-picked by the
+    // uniqueness assignment must still be flagged if that replacement is a weak read.
+    const chosen = entry.candidates.find((c) => c.id === entry.id) ?? entry.candidates[0];
+    const manual = entry.id != null && !entry.candidates.some((c) => c.id === entry.id);
+    const low = !manual && (chosen?.score ?? 0) < LOW_CONFIDENCE;
+    return { manual, low, chosen };
   };
 
   return (
@@ -102,7 +107,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {shown.map((s, i) => {
-                const { manual, low } = slotState(i);
+                const { manual, low, chosen } = slotState(i);
                 const sel = fixing === i;
                 return (
                   <button
@@ -122,7 +127,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                         background: low ? 'var(--field-soft)' : manual ? 'var(--accent-soft)' : 'var(--safe-soft)',
                         border: `1px solid ${low ? 'var(--field-line)' : manual ? 'var(--accent-soft-line)' : 'var(--safe-line)'}`,
                       }}>
-                        {manual ? 'Set' : s.candidates[0] ? pct(s.candidates[0].score) : '—'}
+                        {manual ? 'Set' : chosen ? pct(chosen.score) : '—'}
                       </span>
                       <Icon name={low ? 'alert-triangle' : 'check'} size={13} color={low ? 'var(--field)' : 'var(--safe)'} />
                     </div>

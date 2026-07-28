@@ -113,7 +113,20 @@ export function updateEntryId(entries: ScanEntry[], index: number, id: number | 
   return entries.map((entry, entryIndex) => (entryIndex === index ? { ...entry, id } : entry));
 }
 
-/** The opponent species ids to persist: unique, non-null. */
+/**
+ * The opponent species ids to persist: unique, non-null, and never the player's own.
+ *
+ * A team-preview scan reports both sides, and a preview where fewer than six opponent cards
+ * were detected leaves player slots in the first six — so the side filter belongs here, not
+ * in each caller.
+ */
 export function opponentIdsFromEntries(entries: ScanEntry[]): number[] {
-  return [...new Set(entries.map((entry) => entry.id).filter((id): id is number => id != null))];
+  return [
+    ...new Set(
+      entries
+        .filter((entry) => entry.side !== 'player')
+        .map((entry) => entry.id)
+        .filter((id): id is number => id != null),
+    ),
+  ];
 }
