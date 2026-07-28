@@ -26,7 +26,8 @@ export interface ArenaAddTeamProps {
   submitLabel?: string;
   /** Which method tab to open on (defaults to paste). Portrait scan entry opens on 'scan'. */
   initialMethod?: 'paste' | 'scan';
-  /** One preview card per row instead of three across. */
+  /** One preview card per row instead of three across. Desktop passes false on
+   *  purpose — three across is right there too. See docs/adr/0002. */
   portrait: boolean;
 }
 
