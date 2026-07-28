@@ -383,8 +383,8 @@ const TeamsPage: React.FC = () => {
       <ScanTeamModal
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
-        onImport={handleImportTeam}
         pokemonList={pokemonList}
+        host={{ kind: 'import', onImport: handleImportTeam }}
       />
       <ToastNotification message={toast} />
     </div>

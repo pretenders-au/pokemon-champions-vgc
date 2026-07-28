@@ -209,6 +209,25 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
 
   const MobileCalc = mode === 'arena-landscape' ? ArenaCalculatorLandscape : ArenaCalculator;
 
+  // The mobile and desktop branches below render the same modal, so it is built once here
+  // — the host cannot drift between the two paths.
+  const scanModal = (
+    <ScanTeamModal
+      isOpen={isScanModalOpen}
+      onClose={() => setIsScanModalOpen(false)}
+      pokemonList={pokemonList}
+      host={{
+        kind: 'calc',
+        onLoadDefender: handleLoadDefender,
+        onLoadAttacker: handleLoadAttacker,
+        onSaveTeam: handleSaveOppTeam,
+        onConfirmRoster: confirmRoster,
+        battleRoster,
+        myTeamIds,
+      }}
+    />
+  );
+
   if (isMobile) {
     return (
       <>
@@ -228,17 +247,7 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
           defenderExtra={rosterChips}
           attackerExtra={myTeamChips}
         />
-        <ScanTeamModal
-          isOpen={isScanModalOpen}
-          onClose={() => setIsScanModalOpen(false)}
-          pokemonList={pokemonList}
-          onLoadPokemon={handleLoadDefender}
-          onLoadAttacker={handleLoadAttacker}
-          onSaveTeam={handleSaveOppTeam}
-          battleRoster={battleRoster}
-          onConfirmRoster={confirmRoster}
-          myTeamIds={myTeamIds}
-        />
+        {scanModal}
         <ToastNotification message={toast} />
       </>
     );
@@ -305,17 +314,7 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
         </div>
       }
     />
-    <ScanTeamModal
-      isOpen={isScanModalOpen}
-      onClose={() => setIsScanModalOpen(false)}
-      pokemonList={pokemonList}
-      onLoadPokemon={handleLoadDefender}
-      onLoadAttacker={handleLoadAttacker}
-      onSaveTeam={handleSaveOppTeam}
-      battleRoster={battleRoster}
-      onConfirmRoster={confirmRoster}
-      myTeamIds={myTeamIds}
-    />
+    {scanModal}
     <ToastNotification message={toast} />
     </>
   );
