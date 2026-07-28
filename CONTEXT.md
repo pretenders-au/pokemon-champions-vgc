@@ -109,6 +109,30 @@ A team-preview scan reports **both** sides. Only the opponent's is persisted —
 fewer than six opponent cards were detected leaves player slots among the first six, so the
 side filter lives in `opponentIdsFromEntries` rather than in each caller.
 
+## Presentation
+
+### Viewport mode
+
+Which of the three app frames a screen renders in. One source, `useViewportMode()`:
+
+- **`arena`** — portrait mobile width (≤ 767px).
+- **`arena-landscape`** — landscape orientation at phone height (≤ 767px), plus touch tablets
+  up to iPad-Pro height held sideways, gated on `pointer: coarse` so a laptop in a short window
+  isn't routed to the touch HUD. Wins over `arena`.
+- **`desktop`** — everything else. Note it starts at **768px** wide, not at 1024: a desktop
+  window can be narrower than the `max-w-5xl` its pages cap at.
+
+**Hosts read it; leaves are told.** Every caller is a host — `Layout`, the five page roots, and
+the Android `OverlayApp`. A leaf that branches on layout takes a prop instead, so whoever
+renders it decides: `ArenaAddTeam`, `ArenaReviewMon` and `ArenaPlayerScanReview` each take
+`portrait: boolean`. A leaf that calls the hook cannot be told what to render, which is how
+desktop came to inherit a layout nobody had chosen for it.
+
+Three modes, two layouts. Desktop passes `portrait={false}` and renders the landscape branch
+deliberately — the measurements are in `docs/adr/0002`.
+
+Lives in `src/hooks/useViewportMode.ts`.
+
 ## Decisions
 
 Architectural decisions that constrain the above are recorded in `docs/adr/`.
