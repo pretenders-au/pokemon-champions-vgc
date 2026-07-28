@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import Modal from '@/components/atoms/Modal';
 import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
-import { usePokemonEditor, PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { usePokemonEditor, PokemonConfig, BuildEditor } from '@/features/pokemon/hooks/usePokemonEditor';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
@@ -18,10 +18,14 @@ interface TeamMemberEditorModalProps {
 const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
   isOpen, onClose, onSave, initialConfig, pokemonList, moveList
 }) => {
-  const { 
-    state, handleSelectPokemon, handleSelectPreset, handleImportShowdown, setSp, setNature, toggleNature, 
-    setItem, setAbility, setMove, clearMove, setType, toggleTypeOverride, toggleAegislashForm, loadConfig 
-  } = usePokemonEditor();
+  const { state, editor, handleSelectPreset, handleImportShowdown, loadConfig } = usePokemonEditor();
+
+  // The two dex-dependent edits: the hook has no pokemonList/moveList, this component does.
+  const actions: BuildEditor = {
+    ...editor,
+    selectPreset: (preset) => handleSelectPreset(preset, pokemonList, moveList),
+    importShowdown: (set) => handleImportShowdown(set, pokemonList, moveList),
+  };
 
   useEffect(() => {
     if (isOpen && initialConfig) {
@@ -46,19 +50,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           config={state}
           pokemonList={pokemonList}
           moveList={moveList}
-          onSelectPokemon={handleSelectPokemon}
-          onSelectPreset={(preset) => handleSelectPreset(preset, pokemonList, moveList)}
-          onImportShowdown={(set) => handleImportShowdown(set, pokemonList, moveList)}
-          onSpChange={setSp}
-          onNatureChange={setNature}
-          onToggleNature={toggleNature}
-          onSelectMove={setMove}
-          onClearMove={clearMove}
-          onAbilityChange={setAbility}
-          onItemChange={setItem}
-          onTypeChange={setType}
-          onToggleTypeOverride={toggleTypeOverride}
-          onToggleAegislashForm={toggleAegislashForm}
+          actions={actions}
           hideTypeOverride={true}
           enforceSpLimit={true}
         />

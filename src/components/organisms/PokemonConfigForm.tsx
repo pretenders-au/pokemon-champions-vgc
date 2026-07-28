@@ -3,7 +3,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import StatGrid from '@/components/molecules/StatGrid';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { POKEMON_PRESETS, PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
-import { PokemonConfig, AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
+import { PokemonConfig, BuildEditor, AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import ShowdownExportModal from '@/components/organisms/ShowdownExportModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
@@ -18,38 +18,30 @@ interface PokemonConfigFormProps {
   config: PokemonConfig;
   pokemonList: PokemonBaseStats[];
   moveList: MoveData[];
-  onSelectPokemon: (p: PokemonBaseStats) => void;
-  onSelectPreset?: (preset: PokemonPreset) => void;
-  onImportShowdown?: (set: ParsedShowdownSet) => void;
-  onLoadConfig?: (config: PokemonConfig) => void;
-  onSpChange: (key: string, val: number) => void;
-  onNatureChange: (nature: string) => void;
-  onToggleNature: (stat: string, mod: '+' | '-') => void;
-  onStageChange?: (stat: string, val: number) => void;
-  onSelectMove: (index: number, m: MoveData) => void;
-  onClearMove: (index: number) => void;
-  onAbilityChange: (ability: string) => void;
-  onItemChange: (item: string | null) => void;
-  onTypeChange: (slot: 1 | 2, type: string | null) => void;
-  onToggleTypeOverride: () => void;
-  onToggleAegislashForm?: () => void;
+  /** How this build is edited. See BuildEditor — the form is driven by two reducers. */
+  actions: BuildEditor;
+  /** Stat stages. Battle state, so it isn't part of the build; absent means all zero. */
+  stages?: Record<string, number>;
   // Context-specific props
   title?: string;
   sideColor?: string;
   hideTypeOverride?: boolean;
   enforceSpLimit?: boolean;
-  onResetStats?: () => void;
   renderMoveActions?: (move: MoveData | null, index: number) => React.ReactNode;
 }
 
 const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
-  config, pokemonList, moveList, 
-  onSelectPokemon, onSelectPreset, onImportShowdown, onLoadConfig, onSpChange, onNatureChange, onToggleNature, onStageChange,
-  onSelectMove, onClearMove, onAbilityChange, onItemChange,
-  onTypeChange, onToggleTypeOverride, onToggleAegislashForm,
-  title, sideColor, hideTypeOverride = false, enforceSpLimit = false, onResetStats,
+  config, pokemonList, moveList, actions, stages,
+  title, sideColor, hideTypeOverride = false, enforceSpLimit = false,
   renderMoveActions
 }) => {
+  const {
+    selectPokemon: onSelectPokemon, selectPreset: onSelectPreset, importShowdown: onImportShowdown,
+    loadConfig: onLoadConfig, setSp: onSpChange, setNature: onNatureChange, toggleNature: onToggleNature,
+    setStage: onStageChange, setMove: onSelectMove, clearMove: onClearMove, setAbility: onAbilityChange,
+    setItem: onItemChange, setType: onTypeChange, toggleTypeOverride: onToggleTypeOverride,
+    toggleAegislashForm: onToggleAegislashForm, resetStats: onResetStats,
+  } = actions;
   const [lastAppliedPreset, setLastAppliedPreset] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -222,7 +214,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
           onToggleNature={onToggleNature}
           onSpChange={onSpChange}
           onStageChange={onStageChange}
-          stages={ (config as any).stages || { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } }
+          stages={stages ?? { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }}
           ability={config.activeAbility}
           pokemonTypes={pokemonTypes}
           enforceSpLimit={enforceSpLimit}
