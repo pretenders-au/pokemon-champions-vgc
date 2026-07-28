@@ -1,6 +1,4 @@
-import { getDb } from '@/db';
-import { abilities, pokemonAbilities } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { pokemonRepository } from '@/db/repositories/pokemon.repo';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
@@ -18,16 +16,7 @@ export function useCalculatorActions(
     dispatch({ type: 'SELECT_POKEMON', payload: { side, pokemon: p } });
     
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({
-        name: abilities.nameEn
-      })
-      .from(pokemonAbilities)
-      .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-      .where(eq(pokemonAbilities.pokemonId, p.id))
-      .orderBy(pokemonAbilities.slot);
-
-      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      const abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
       dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
     } catch (error) {
       console.error('Failed to fetch abilities:', error);
@@ -39,13 +28,7 @@ export function useCalculatorActions(
   const handleSwapForm = async (side: 'p1' | 'p2', p: PokemonBaseStats) => {
     dispatch({ type: 'SWAP_FORM', payload: { side, pokemon: p } });
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      const abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
       dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
     } catch (error) {
       console.error('Failed to fetch abilities:', error);
@@ -58,13 +41,7 @@ export function useCalculatorActions(
     
     let abilityNames: string[] = [];
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
     } catch (e) {}
 
     const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
@@ -129,13 +106,7 @@ export function useCalculatorActions(
     
     let abilityNames: string[] = [];
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
     } catch (e) {}
 
     const movesData = config.moves.map((m: any) => m ? (moveList.find(move => move.nameEn === m.nameEn) || null) : null);

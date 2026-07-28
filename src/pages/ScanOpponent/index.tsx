@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { usePokemonList } from '@/features/pokemon/hooks/useDex';
 import { useFormat } from '@/features/formats/FormatContext';
 import { Icon } from '@/design-system/arena';
 import PokemonImage from '@/components/atoms/PokemonImage';
@@ -48,31 +45,7 @@ const HOW_IT_WORKS = [
 const ScanOpponentPage: React.FC = () => {
   const navigate = useNavigate();
   const { format } = useFormat();
-  const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const db = await getDb();
-        const rows = await db
-          .select({
-            id: pokemon.id, identifier: pokemon.identifier, nameEn: pokemon.nameEn, nameZh: pokemon.nameZh,
-            type1: pokemon.type1, type2: pokemon.type2,
-            baseHp: pokemon.baseHp, baseAttack: pokemon.baseAttack, baseDefense: pokemon.baseDefense,
-            baseSpAtk: pokemon.baseSpAtk, baseSpDef: pokemon.baseSpDef, baseSpeed: pokemon.baseSpeed,
-          })
-          .from(pokemon)
-          .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
-          .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, format));
-        if (!cancelled) setPokemonList(rows as PokemonBaseStats[]);
-      } catch (e) {
-        console.error('[scan-page] failed to load pokemon', e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [format]);
+  const pokemonList = usePokemonList(format);
 
   const legalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);

@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/features/damage-calculator/utils/damage-calc';
-import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { usePokemonList, useMoveList } from '@/features/pokemon/hooks/useDex';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/features/pokemon/utils/type-effectiveness';
 import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { POKEMON_PRESETS, PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import { getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
@@ -60,8 +56,8 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
   const navigate = useNavigate();
   const { state, dispatch } = useCalculatorState();
   const { format } = useFormat();
-  const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
-  const [moveList, setMoveList] = useState<MoveData[]>([]);
+  const pokemonList = usePokemonList(format);
+  const moveList = useMoveList();
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const { teams, createTeam } = useTeams();
@@ -77,42 +73,14 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
     [myTeam],
   );
 
+  // Type efficacy is not format-scoped and not a dex table, so it keeps its own load.
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const db = await getDb();
-        const [pokeResult, moveResult, efficacyResult] = await Promise.all([
-          db.select({
-            id: pokemon.id,
-            identifier: pokemon.identifier,
-            nameEn: pokemon.nameEn,
-            nameZh: pokemon.nameZh,
-            type1: pokemon.type1,
-            type2: pokemon.type2,
-            baseHp: pokemon.baseHp,
-            baseAttack: pokemon.baseAttack,
-            baseDefense: pokemon.baseDefense,
-            baseSpAtk: pokemon.baseSpAtk,
-            baseSpDef: pokemon.baseSpDef,
-            baseSpeed: pokemon.baseSpeed,
-          })
-          .from(pokemon)
-          .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
-          .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, format)),
-          db.select().from(moves),
-          fetchTypeEfficacy()
-        ]);
-
-        setPokemonList(pokeResult as PokemonBaseStats[]);
-        setMoveList(moveResult as MoveData[]);
-        setEfficacyMap(efficacyResult);
-      } catch (error) {
-        console.error('Failed to fetch initial data:', error);
-      }
-    };
-    fetchData();
-  }, [format]);
+    let cancelled = false;
+    fetchTypeEfficacy()
+      .then((m) => { if (!cancelled) setEfficacyMap(m); })
+      .catch((e) => console.error('Failed to fetch type efficacy:', e));
+    return () => { cancelled = true; };
+  }, []);
 
   const { p1MaxHp, p2MaxHp, p1Results, p2Results } = useDamageCalc(state, pokemonList, efficacyMap);
 

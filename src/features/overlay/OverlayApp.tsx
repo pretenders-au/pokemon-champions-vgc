@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { overlayBridge } from './overlayBridge';
 import { routeScan } from './overlayScan';
-import { usePokemonList } from './usePokemonList';
+import { usePokemonList, useMoveList } from '@/features/pokemon/hooks/useDex';
 import StripView from './StripView';
 import ConfirmRosterView from './ConfirmRosterView';
 import DamageCalculatorPage, { type OverlayDefender } from '@/pages/DamageCalculator';
@@ -19,7 +19,6 @@ import { ArenaPlayerScanReview } from '../scan/ArenaPlayerScanReview';
 import { detectPlayerPanels } from '../scan/playerPanels';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { useViewportMode } from '@/hooks/useViewportMode';
-import { useMoveList } from './useMoveList';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 type View = 'idle' | 'scanning' | 'confirm' | 'calc' | 'error' | 'playerScan' | 'playerSaved';
