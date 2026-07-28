@@ -138,26 +138,28 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
           hpPercent: props.hpPercent,
           isTypeOverridden: props.isTypeOverridden,
           form: props.stats.form,
-          stages: props.stages,
-        } as any}
+        }}
         pokemonList={props.pokemonList}
         moveList={props.moveList}
-        onSelectPokemon={props.onSelectPokemon}
-        onSelectPreset={props.onSelectPreset}
-        onImportShowdown={props.onImportShowdown}
-        onLoadConfig={props.onLoadConfig}
-        onSpChange={props.onSpChange}
-        onNatureChange={props.onNatureChange}
-        onToggleNature={props.onToggleNature}
-        onStageChange={props.onStageChange}
-        onSelectMove={props.onSelectMove}
-        onClearMove={props.onClearMove}
-        onAbilityChange={props.onAbilityChange}
-        onItemChange={props.onItemChange}
-        onTypeChange={props.onTypeChange}
-        onToggleTypeOverride={props.onToggleTypeOverride}
-        onToggleAegislashForm={props.onToggleAegislashForm}
-        onResetStats={props.onResetStats}
+        stages={props.stages}
+        actions={{
+          selectPokemon: props.onSelectPokemon,
+          selectPreset: props.onSelectPreset,
+          importShowdown: props.onImportShowdown,
+          loadConfig: props.onLoadConfig,
+          setSp: props.onSpChange,
+          setNature: props.onNatureChange,
+          toggleNature: props.onToggleNature,
+          setStage: props.onStageChange,
+          setMove: props.onSelectMove,
+          clearMove: props.onClearMove,
+          setAbility: props.onAbilityChange,
+          setItem: props.onItemChange,
+          setType: props.onTypeChange,
+          toggleTypeOverride: props.onToggleTypeOverride,
+          toggleAegislashForm: props.onToggleAegislashForm,
+          resetStats: props.onResetStats,
+        }}
         title={title}
         sideColor={sideColor}
         renderMoveActions={renderMoveActions}

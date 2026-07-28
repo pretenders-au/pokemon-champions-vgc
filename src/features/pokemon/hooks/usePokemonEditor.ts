@@ -8,6 +8,33 @@ import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import { NATURES, getNatureFromStats, getFormattedNature, toggleNature } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
+/**
+ * How a Pokémon build is edited, independent of who owns the state.
+ *
+ * PokemonConfigForm is driven by two different reducers — the team editor's
+ * (`usePokemonEditor`) and the calculator's (`useSideEditor` over `sideReducer`) — so the
+ * form takes this bag rather than either reducer's dispatch. Optional members are the edits
+ * a given host doesn't offer; the form hides the control when one is absent.
+ */
+export interface BuildEditor {
+  selectPokemon: (p: PokemonBaseStats) => void;
+  selectPreset?: (preset: PokemonPreset) => void;
+  importShowdown?: (set: ParsedShowdownSet) => void;
+  loadConfig?: (config: PokemonConfig) => void;
+  setSp: (key: string, val: number) => void;
+  setNature: (nature: string) => void;
+  toggleNature: (stat: string, mod: '+' | '-') => void;
+  setStage?: (stat: string, val: number) => void;
+  setMove: (index: number, m: MoveData) => void;
+  clearMove: (index: number) => void;
+  setAbility: (ability: string) => void;
+  setItem: (item: string | null) => void;
+  setType: (slot: 1 | 2, type: string | null) => void;
+  toggleTypeOverride: () => void;
+  toggleAegislashForm?: () => void;
+  resetStats?: () => void;
+}
+
 export interface PokemonConfig {
   selectedId: number | null;
   type1: string | null;
@@ -415,8 +442,25 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     dispatch({ type: 'RESET_STATS' });
   }, []);
 
+  // Everything that needs no dex. The host adds selectPreset/importShowdown, which do.
+  const editor: Omit<BuildEditor, 'selectPreset' | 'importShowdown'> = {
+    selectPokemon: handleSelectPokemon,
+    setSp,
+    setNature,
+    toggleNature,
+    setMove,
+    clearMove,
+    setAbility,
+    setItem,
+    setType,
+    toggleTypeOverride,
+    toggleAegislashForm,
+    resetStats: handleResetStats,
+  };
+
   return {
     state,
+    editor,
     handleSelectPokemon,
     handleSelectPreset,
     handleImportShowdown,
