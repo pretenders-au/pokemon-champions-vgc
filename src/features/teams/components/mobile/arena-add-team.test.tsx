@@ -17,7 +17,7 @@ const moveList = [{ id: 1, nameEn: 'Earthquake', nameZh: null, typeId: 5 }] as u
 
 const paste = (text: string) => {
   render(
-    <ArenaAddTeam pokemonList={pokemonList} moveList={moveList} onBack={vi.fn()} onScanSave={vi.fn()} onCreate={vi.fn()} />
+    <ArenaAddTeam portrait={false} pokemonList={pokemonList} moveList={moveList} onBack={vi.fn()} onScanSave={vi.fn()} onCreate={vi.fn()} />
   );
   const box = screen.getByPlaceholderText(/paste a Pokémon Showdown team export/i);
   fireEvent.change(box, { target: { value: text } });
@@ -56,5 +56,34 @@ describe('ArenaAddTeam — paste preview wiring', () => {
     // reported. Matches the pre-module setToConfig behaviour.
     paste(SET('Garchomp', 'Rough Skn'));
     expect(screen.getByText('Rough Skn')).toBeDefined();
+  });
+});
+
+describe('ArenaAddTeam layout', () => {
+  // One preview card per row in portrait, three across otherwise.
+  const renderAt = (portrait: boolean) =>
+    render(
+      <ArenaAddTeam
+        pokemonList={pokemonList}
+        moveList={moveList}
+        onBack={vi.fn()}
+        onScanSave={vi.fn()}
+        onCreate={vi.fn()}
+        portrait={portrait}
+      />
+    );
+
+  const previewGrid = () => screen.getByTestId('add-team-preview-grid');
+
+  it('stacks the preview cards in portrait', () => {
+    renderAt(true);
+    fireEvent.change(screen.getByPlaceholderText(/paste a Pokémon Showdown team export/i), { target: { value: SET('Garchomp') } });
+    expect(previewGrid().style.gridTemplateColumns).toBe('1fr');
+  });
+
+  it('lays them out three across otherwise', () => {
+    renderAt(false);
+    fireEvent.change(screen.getByPlaceholderText(/paste a Pokémon Showdown team export/i), { target: { value: SET('Garchomp') } });
+    expect(previewGrid().style.gridTemplateColumns).toContain('repeat(3');
   });
 });

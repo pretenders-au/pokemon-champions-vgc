@@ -180,6 +180,7 @@ const TeamsPage: React.FC = () => {
         {mode === 'arena-landscape' ? (
           creatingTeam ? (
             <ArenaAddTeam
+              portrait={false}
               pokemonList={pokemonList}
               moveList={moveList}
               initialName={editTeam?.name}
@@ -191,6 +192,7 @@ const TeamsPage: React.FC = () => {
             />
           ) : reviewMember && reviewTeam ? (
             <ArenaReviewMon
+              portrait={false}
               member={reviewMember}
               teamName={reviewTeam.name}
               pokemonList={pokemonList}
@@ -212,6 +214,7 @@ const TeamsPage: React.FC = () => {
           )
         ) : creatingTeam ? (
           <ArenaAddTeam
+            portrait
             pokemonList={pokemonList}
             moveList={moveList}
             onBack={closeAddTeam}
@@ -255,6 +258,7 @@ const TeamsPage: React.FC = () => {
     return (
       <div className="h-[calc(100vh_-_8rem)] max-w-5xl mx-auto">
         <ArenaAddTeam
+          portrait={false}
           pokemonList={pokemonList}
           moveList={moveList}
           initialMethod="paste"
