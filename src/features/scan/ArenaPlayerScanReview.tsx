@@ -37,7 +37,7 @@ export interface PlayerScanReviewProps {
   hint?: React.ReactNode;
   /** Externally captured frame; scanned whenever `seq` advances (overlay bubble taps). */
   frame?: { blob: Blob; seq: number } | null;
-  /** One glance card per row instead of three across. The host decides. */
+  /** One glance card per row instead of three across. */
   portrait: boolean;
 }
 

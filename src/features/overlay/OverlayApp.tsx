@@ -34,8 +34,8 @@ const OverlayApp: React.FC = () => {
   // clobber localStorage['vgc_teams'] with only the new team.
   const { createTeam } = useTeams();
   const [playerFrame, setPlayerFrame] = useState<{ blob: Blob; seq: number } | null>(null);
-  // The overlay is a host, like Layout: it reads the panel's own viewport once and hands
-  // the layout to the review card, which no longer consults a global itself.
+  // The overlay panel has its own viewport, so the layout it hands the review card is read
+  // here rather than assumed — a phone-sized panel and a landscape one differ.
   const portrait = useViewportMode() === 'arena';
   const [view, setView] = useState<View>('idle');
   const [errorReason, setErrorReason] = useState<'empty' | 'battle'>('empty');

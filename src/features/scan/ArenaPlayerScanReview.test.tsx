@@ -70,3 +70,32 @@ describe('ArenaPlayerScanReview hosting seams', () => {
     expect(scanCalls).toHaveLength(2);
   });
 });
+
+describe('ArenaPlayerScanReview layout', () => {
+  // The glance grid is one card per row in portrait, three across otherwise. Before
+  // `portrait` became a prop this came from a global that jsdom always resolved to
+  // 'desktop', so the portrait branch had never executed.
+  const renderAt = async (portrait: boolean) => {
+    const { deps } = mkDeps();
+    render(
+      <ArenaPlayerScanReview
+        portrait={portrait}
+        pokemonList={pokemonList}
+        moveList={[]}
+        onSave={() => {}}
+        deps={deps}
+        frame={{ blob: new Blob(['x']), seq: 1 }}
+      />
+    );
+    await act(async () => {});
+    return screen.getByTestId('scan-glance-grid');
+  };
+
+  it('stacks the glance cards in portrait', async () => {
+    expect((await renderAt(true)).style.gridTemplateColumns).toBe('1fr');
+  });
+
+  it('lays them out three across otherwise', async () => {
+    expect((await renderAt(false)).style.gridTemplateColumns).toContain('repeat(3');
+  });
+});

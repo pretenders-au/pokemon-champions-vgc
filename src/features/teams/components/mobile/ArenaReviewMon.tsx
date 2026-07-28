@@ -23,7 +23,7 @@ export interface ArenaReviewMonProps {
   saveLabel?: string;
   /** Optional content rendered directly under the header — e.g. the scan flow's species-correction band. */
   banner?: React.ReactNode;
-  /** Stack the two columns instead of placing them side by side. The host decides. */
+  /** Stack the moves and stats columns instead of placing them side by side. */
   portrait: boolean;
 }
 

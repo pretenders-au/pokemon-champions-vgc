@@ -119,9 +119,8 @@ describe('ArenaReviewMon nature cycling', () => {
 
 describe('ArenaReviewMon layout', () => {
   // The body is two columns beside each other on landscape and stacked in portrait.
-  // Before `portrait` became a prop this was read from a global, and since jsdom has no
-  // matchMedia every test in this file rendered the landscape branch — the portrait one
-  // had never executed.
+  // jsdom has no matchMedia, so a component that reads the viewport itself always renders
+  // the landscape branch here — which is why the layout has to arrive as a prop to be testable.
   const body = () => screen.getByTestId('review-mon-body');
 
   const renderAt = (portrait: boolean) =>

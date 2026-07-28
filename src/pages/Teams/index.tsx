@@ -214,7 +214,7 @@ const TeamsPage: React.FC = () => {
           )
         ) : creatingTeam ? (
           <ArenaAddTeam
-            portrait={mode === 'arena'}
+            portrait
             pokemonList={pokemonList}
             moveList={moveList}
             onBack={closeAddTeam}
