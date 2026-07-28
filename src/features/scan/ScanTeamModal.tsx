@@ -13,28 +13,49 @@ import { formFamilyIds, buildLegalIdsResolver } from './battleRoster';
 import { seedRoster, opponentIdsFromEntries, availableCandidatesFor, unavailableIdsFor, updateEntryId, LOW_CONFIDENCE, type ScanEntry } from './roster';
 import CropStep from './CropStep';
 
+/**
+ * Which screen opened the modal, and what it will do with the result. Two hosts exist:
+ * the Teams page turns a scan into a Team, the calculator loads sides and confirms a
+ * Battle roster. Naming the host is what makes each action's presence a fact rather than
+ * an inference from which callbacks happened to be passed.
+ *
+ * Distinct from the *scan* mode (`useTeamScan`'s `mode`), which is decided by the image.
+ */
+export type ScanHost =
+  | {
+      kind: 'import';
+      /** Turn the scanned opponent roster into a new Team. */
+      onImport: (sets: ParsedShowdownSet[]) => void;
+    }
+  | {
+      kind: 'calc';
+      /** Load an opponent entry into the calculator's defender side. */
+      onLoadDefender: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
+      /** Load a player entry (battle scans only) into the attacker side. */
+      onLoadAttacker: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
+      /** Save the scanned opponent roster as a Team, without leaving the calculator. */
+      onSaveTeam: (sets: ParsedShowdownSet[]) => void;
+      /** Confirm the scanned opponent species as the Battle roster (team scans only). */
+      onConfirmRoster: (ids: number[]) => void;
+      /** Confirmed opponent ids — battle scans mask opponent tiles to their form families. */
+      battleRoster: number[] | null;
+      /** The user's own team's species ids — battle scans mask PLAYER tiles likewise. */
+      myTeamIds: number[] | null;
+    };
+
 interface ScanTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport?: (sets: ParsedShowdownSet[]) => void;
   pokemonList: PokemonBaseStats[];
-  /** Calc mode: when provided, opponent entries show a "Set as defender" action. */
-  onLoadPokemon?: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
-  /** Calc mode: when provided, player-side entries (battle scans) show a "Set as attacker" action. */
-  onLoadAttacker?: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
-  /** Calc mode: when provided, shows an optional button to save the scanned roster as a Team. */
-  onSaveTeam?: (sets: ParsedShowdownSet[]) => void;
-  /** A screenshot captured externally (e.g. one-tap Android capture) to scan when the modal opens. */
-  externalBlob?: Blob | null;
-  /** Battle-roster mode: confirmed opponent ids — battle scans mask opponent tiles to their form families. */
-  battleRoster?: number[] | null;
-  /** Battle-roster mode: when set, team-preview results hide player rows and confirm saves the roster. */
-  onConfirmRoster?: (ids: number[]) => void;
-  /** The user's own team's species ids — battle scans mask PLAYER tiles to their form families. */
-  myTeamIds?: number[] | null;
+  host: ScanHost;
 }
 
-const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob, battleRoster, onConfirmRoster, myTeamIds }) => {
+const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonList, host }) => {
+  // Narrowed once, so every host-specific affordance below tests one thing.
+  const calc = host.kind === 'calc' ? host : null;
+  const imp = host.kind === 'import' ? host : null;
+  const battleRoster = calc?.battleRoster ?? null;
+  const myTeamIds = calc?.myTeamIds ?? null;
   const fullLegalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const maskIds = useMemo(
     () => (battleRoster && battleRoster.length > 0 ? formFamilyIds(battleRoster, pokemonList) : null),
@@ -89,15 +110,6 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     }
   };
 
-  // Scan an externally-captured screenshot (one-tap Android capture) when it arrives.
-  React.useEffect(() => {
-    if (isOpen && externalBlob) {
-      setPendingBlob(externalBlob);
-      void scan(externalBlob);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, externalBlob]);
-
   // Seed the editable roster from the scan results once a scan completes.
   React.useEffect(() => {
     if (status === 'done') {
@@ -126,25 +138,30 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
 
   const confirm = () => {
     const names = rosterNames();
-    if (names.length === 0 || !onImport) return;
-    onImport(toParsedSets(names));
+    if (names.length === 0 || !imp) return;
+    imp.onImport(toParsedSets(names));
     handleClose();
   };
 
   const saveTeam = () => {
     const names = rosterNames();
-    if (names.length === 0 || !onSaveTeam) return;
-    onSaveTeam(toParsedSets(names));
+    if (names.length === 0 || !calc) return;
+    calc.onSaveTeam(toParsedSets(names));
   };
 
   const confirmRosterIds = () => opponentIdsFromEntries(roster);
 
   const confirmRoster = () => {
     const ids = confirmRosterIds();
-    if (ids.length === 0 || !onConfirmRoster) return;
-    onConfirmRoster(ids);
+    if (ids.length === 0 || !calc) return;
+    calc.onConfirmRoster(ids);
     handleClose();
   };
+
+  // A Battle roster is six confirmed species, so only a team preview can produce one — a
+  // battle screen shows who is out right now. Both the player-row filter and the confirm
+  // button turn on exactly this.
+  const confirmsRoster = calc !== null && mode !== 'battle';
 
   const handleClose = () => {
     reset();
@@ -216,7 +233,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
 
             {roster
               .map((entry, i) => ({ entry, i }))
-              .filter(({ entry }) => !(onConfirmRoster && mode !== 'battle' && entry.side === 'player'))
+              .filter(({ entry }) => !(confirmsRoster && entry.side === 'player'))
               .map(({ entry, i }) => {
               const selectedName = entry.id != null ? byId.get(entry.id)?.nameEn : undefined;
               const offerable = availableCandidatesFor(roster, i);
@@ -292,21 +309,21 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                           : 'Choose Pokémon'}
                     </button>
                   </div>
-                  {onLoadPokemon && entry.side !== 'player' && (
+                  {calc && entry.side !== 'player' && (
                     <button
                       type="button"
                       className="px-2 py-1 text-xs font-semibold text-accent border border-accent-soft-line rounded hover:bg-accent-soft disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap"
-                      onClick={() => entry.id != null && onLoadPokemon(entry.id, { hpPercent: entry.hpPercent })}
+                      onClick={() => entry.id != null && calc.onLoadDefender(entry.id, { hpPercent: entry.hpPercent })}
                       disabled={entry.id == null}
                     >
                       Set as defender
                     </button>
                   )}
-                  {onLoadAttacker && entry.side === 'player' && (
+                  {calc && entry.side === 'player' && (
                     <button
                       type="button"
                       className="px-2 py-1 text-xs font-semibold text-safe border border-safe-line rounded hover:bg-safe-soft disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap"
-                      onClick={() => entry.id != null && onLoadAttacker(entry.id, { hpPercent: entry.hpPercent })}
+                      onClick={() => entry.id != null && calc.onLoadAttacker(entry.id, { hpPercent: entry.hpPercent })}
                       disabled={entry.id == null}
                     >
                       Set as attacker
@@ -361,7 +378,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                 </button>
               )}
               <button className="px-4 py-2 rounded border border-line-2 text-ink-2 hover:bg-raise" onClick={handleClose}>Cancel</button>
-              {onSaveTeam && (
+              {calc && (
                 <button
                   className="px-4 py-2 rounded border border-safe-line text-safe disabled:opacity-45"
                   onClick={saveTeam}
@@ -370,7 +387,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   Save opp team to Teams
                 </button>
               )}
-              {onConfirmRoster && mode !== 'battle' && (
+              {confirmsRoster && (
                 <button
                   className="px-4 py-2 rounded bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-45"
                   onClick={confirmRoster}
@@ -379,7 +396,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   Confirm opponent team
                 </button>
               )}
-              {onImport && (
+              {imp && (
                 <button
                   className="px-4 py-2 rounded bg-safe-soft text-safe disabled:opacity-45"
                   onClick={confirm}

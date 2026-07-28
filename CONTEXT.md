@@ -104,6 +104,13 @@ Reading a game screenshot to recover Pokémon. Two kinds, and they are not inter
 - **Opponent scan** — the opponent's team preview, producing species only, which become a
   **Battle roster**.
 
+An opponent scan reads either a **team preview** or a **battle screen**, and which one it was
+is decided by the image, not by the screen that opened the scanner. Only a team preview can
+confirm a **Battle roster**; a battle screen shows who is out right now, so it loads calculator
+sides instead. Keep the two axes apart — `useTeamScan`'s `mode` is what the image turned out to
+be, `ScanTeamModal`'s `host` is which screen asked. Conflating them reads as one "mode" with
+four states and gets the roster rules wrong.
+
 ### Battle roster
 
 The opponent species confirmed for the current battle. Once locked it masks later scans and

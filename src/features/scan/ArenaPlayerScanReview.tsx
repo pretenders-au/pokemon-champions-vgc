@@ -26,8 +26,6 @@ export interface PlayerScanReviewProps {
   onSave: (members: PokemonConfig[]) => void;
   /** When provided, a Cancel button shows; use to close the host (modal) and clear state. */
   onCancel?: () => void;
-  /** Whether the panel is currently shown — drives classifier warmup and reset-on-hide. Default true. */
-  active?: boolean;
   /** test-only affordance: inject fake usePlayerTeamScan deps instead of the real DEFAULT_PLAYER_DEPS */
   deps?: PlayerTeamScanDeps;
   /** Capture affordances rendered in each screen chip. Defaults to file picker +
@@ -50,14 +48,14 @@ export interface PlayerScanReviewProps {
  * (`sources` [] to hide pickers, `hint` copy, `frame` for bubble-tap captures),
  * so the Android bubble popup shares this polished view.
  */
-export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame, portrait }) => {
+export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemonList, moveList, onSave, onCancel, deps, sources, hint, frame, portrait }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
   // ponytail: dev-only harness for golden verification in-browser (mirrors PlayerScanPanel)
   if (import.meta.env.DEV) (window as any).__playerScanDebug = { addFrame };
 
-  React.useEffect(() => { if (active) void loadClassifier(); }, [active]);
+  React.useEffect(() => { void loadClassifier(); }, []);
 
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
@@ -76,11 +74,8 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemon
   const [reopenSlots, setReopenSlots] = useState<Record<number, boolean>>({});
   const [bandClosedSlots, setBandClosedSlots] = useState<Record<number, boolean>>({});
 
-  // Reset on hide (host closed).
-  React.useEffect(() => {
-    if (!active) { reset(); setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false); setResolvedSlots({}); setReopenSlots({}); setBandClosedSlots({}); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  // Don't add reset-on-hide: ArenaAddTeam keeps this mounted-but-hidden on purpose, so it
+  // would discard the user's scanned team.
 
   // Seed/refresh edits when a screenshot finishes (same rule as PlayerScanPanel).
   const prevStatusesRef = React.useRef({ moves: movesImage.status, stats: statsImage.status });
