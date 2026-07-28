@@ -1,7 +1,6 @@
 import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
-import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/features/damage-calculator/utils/damage-calc';
 import { getDb } from '@/db';
@@ -20,8 +19,7 @@ import { useFormat } from '@/features/formats/FormatContext';
 import { useCalculatorState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageCalc } from '@/features/damage-calculator/hooks/useDamageCalc';
-import { AttackerPanel } from '@/features/damage-calculator/components/AttackerPanel';
-import { DefenderPanel } from '@/features/damage-calculator/components/DefenderPanel';
+import SidePanel from '@/features/damage-calculator/components/SidePanel';
 import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
@@ -272,14 +270,15 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
         />
       }
       attackerPanel={
-        <AttackerPanel
+        <SidePanel
+          side="p1"
           state={state}
           dispatch={dispatch}
           pokemonList={pokemonList}
           moveList={moveList}
-          onApplySpread={handleApplySpread}
-          onResetBuild={handleResetBuild}
-          attackerExtra={myTeamChips}
+          onApplySpread={(spread) => handleApplySpread('p1', spread)}
+          onResetBuild={() => handleResetBuild('p1')}
+          extra={myTeamChips}
         />
       }
       defenderPanel={
@@ -293,14 +292,15 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
               Scan opponent
             </button>
           </div>
-          <DefenderPanel
+          <SidePanel
+            side="p2"
             state={state}
             dispatch={dispatch}
             pokemonList={pokemonList}
             moveList={moveList}
-            onApplySpread={handleApplySpread}
-            onResetBuild={handleResetBuild}
-            defenderExtra={rosterChips}
+            onApplySpread={(spread) => handleApplySpread('p2', spread)}
+            onResetBuild={() => handleResetBuild('p2')}
+            extra={rosterChips}
           />
         </div>
       }

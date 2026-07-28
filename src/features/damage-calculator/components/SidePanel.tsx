@@ -7,68 +7,53 @@ import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
 import BuildPresets from '@/features/damage-calculator/components/BuildPresets';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
+import type { CalcState, CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
+import { useSideEditor } from '@/features/damage-calculator/hooks/useSideEditor';
 import { calculateHP } from '@/features/damage-calculator/utils/damage-calc';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
-interface PokemonPanelProps {
-  title: string;
-  sideColor: string;
+interface SidePanelProps {
   side: 'p1' | 'p2';
+  state: CalcState;
+  dispatch: React.Dispatch<CalcAction>;
   pokemonList: PokemonBaseStats[];
-  selectedId: number | null;
-  onSelectPokemon: (p: PokemonBaseStats) => void;
-  onSelectPreset?: (preset: PokemonPreset) => void;
-  onImportShowdown?: (set: ParsedShowdownSet) => void;
-  onLoadConfig?: (config: any) => void;
-  stats: any;
-  onSpChange: (key: string, val: number) => void;
-  onNatureChange: (nature: string) => void;
+  moveList: MoveData[];
   onApplySpread: (spread: Spread) => void;
   onResetBuild: () => void;
-  onToggleNature: (stat: string, mod: '+' | '-') => void;
-  stages: Record<string, number>;
-  onStageChange: (stat: string, val: number) => void;
-  moveList: MoveData[];
-  moves: (MoveData | null)[];
-  onSelectMove: (index: number, m: MoveData) => void;
-  onClearMove: (index: number) => void;
-  abilities: string[];
-  activeAbility: string | null;
-  onAbilityChange: (ability: string) => void;
-  item: string | null;
-  onItemChange: (item: string | null) => void;
-  activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
-  hpPercent: number;
-  onHpPercentChange: (val: number) => void;
-  type1: string | null;
-  type2: string | null;
-  onTypeChange: (slot: 1 | 2, type: string | null) => void;
-  isTypeOverridden: boolean;
-  onToggleTypeOverride: () => void;
-  onToggleAegislashForm?: () => void;
-  onResetStats?: () => void;
-  isReflect: boolean;
-  isLightScreen: boolean;
-  isAuroraVeil: boolean;
-  isHelpingHand: boolean;
-  isFriendGuard: boolean;
-  isTailwind: boolean;
-  onToggleSideEffect: (effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind') => void;
-  movesForceCrit: boolean[];
-  onToggleMoveCrit: (index: number) => void;
-  movesHits: number[];
-  onUpdateMoveHits: (index: number, val: number) => void;
-  faintedCount: number;
-  onFaintedCountChange: (val: number) => void;
+  /** Optional slot rendered above the panel (my-team / battle-roster chips). */
+  extra?: React.ReactNode;
 }
 
-const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
+const SIDE_CHROME = {
+  p1: { title: 'Pokémon 1', color: 'bg-accent' },
+  p2: { title: 'Pokémon 2', color: 'bg-danger' },
+} as const;
+
+/**
+ * One side of the calculator: the shared build form plus the battle-only controls
+ * (current HP, side effects, per-move crit/hits, fainted teammates, spread presets).
+ *
+ * Calculator-only, so it reads CalcState and dispatches directly; only the shared form
+ * is addressed through BuildEditor.
+ */
+const SidePanel: React.FC<SidePanelProps> = ({
+  side, state, dispatch, pokemonList, moveList, onApplySpread, onResetBuild, extra,
+}) => {
+  const stats = state[side];
+  const editor = useSideEditor(side, dispatch, pokemonList, moveList);
+  const { title, color: sideColor } = SIDE_CHROME[side];
+
   const {
-    title, sideColor, side, hpPercent, onHpPercentChange, stats,
-    isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
-    onToggleSideEffect, movesForceCrit, onToggleMoveCrit, movesHits, onUpdateMoveHits,
-    stages, onStageChange, faintedCount, onFaintedCountChange
-  } = props;
+    hpPercent, isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
+    movesForceCrit, movesHits, stages, faintedCount,
+  } = stats;
+
+  const onHpPercentChange = (val: number) => dispatch({ type: 'SET_HP_PERCENT', payload: { side, val } });
+  const onToggleSideEffect = (effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind') =>
+    dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side, effect } });
+  const onToggleMoveCrit = (index: number) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side, index } });
+  const onUpdateMoveHits = (index: number, val: number) => dispatch({ type: 'SET_MOVE_HITS', payload: { side, index, val } });
+  const onFaintedCountChange = (val: number) => dispatch({ type: 'SET_FAINTED_COUNT', payload: { side, val } });
 
   const maxHp = calculateHP(stats.baseHp, stats.spHp);
   const currentHp = Math.floor(maxHp * (hpPercent / 100));
@@ -111,61 +96,21 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
   );
 
   return (
-    <div className="bg-card p-4 rounded-xl border border-line space-y-4 h-full">
+    <div className="space-y-4">
+      {extra}
+      <div className="bg-card p-4 rounded-xl border border-line space-y-4 h-full">
       <PokemonConfigForm
-        config={{
-          selectedId: props.selectedId,
-          type1: props.type1,
-          type2: props.type2,
-          baseHp: stats.baseHp,
-          baseAtk: stats.baseAtk,
-          baseDef: stats.baseDef,
-          baseSpa: stats.baseSpa,
-          baseSpd: stats.baseSpd,
-          baseSpe: stats.baseSpe,
-          spHp: stats.spHp,
-          spAtk: stats.spAtk,
-          spDef: stats.spDef,
-          spSpa: stats.spSpa,
-          spSpd: stats.spSpd,
-          spSpe: stats.spSpe,
-          nature: props.stats.nature || 'Hardy',
-          moves: props.moves,
-          activeMoveIndex: 0, 
-          abilities: props.abilities,
-          activeAbility: props.activeAbility,
-          item: props.item,
-          hpPercent: props.hpPercent,
-          isTypeOverridden: props.isTypeOverridden,
-          form: props.stats.form,
-        }}
-        pokemonList={props.pokemonList}
-        moveList={props.moveList}
-        stages={props.stages}
-        actions={{
-          selectPokemon: props.onSelectPokemon,
-          selectPreset: props.onSelectPreset,
-          importShowdown: props.onImportShowdown,
-          loadConfig: props.onLoadConfig,
-          setSp: props.onSpChange,
-          setNature: props.onNatureChange,
-          toggleNature: props.onToggleNature,
-          setStage: props.onStageChange,
-          setMove: props.onSelectMove,
-          clearMove: props.onClearMove,
-          setAbility: props.onAbilityChange,
-          setItem: props.onItemChange,
-          setType: props.onTypeChange,
-          toggleTypeOverride: props.onToggleTypeOverride,
-          toggleAegislashForm: props.onToggleAegislashForm,
-          resetStats: props.onResetStats,
-        }}
+        config={stats}
+        pokemonList={pokemonList}
+        moveList={moveList}
+        actions={editor}
+        stages={stages}
         title={title}
         sideColor={sideColor}
         renderMoveActions={renderMoveActions}
       />
 
-      <BuildPresets onApplySpread={props.onApplySpread} onReset={props.onResetBuild} />
+      <BuildPresets onApplySpread={onApplySpread} onReset={onResetBuild} />
 
       <div className="bg-inset p-2 rounded-xl border border-line flex items-center gap-3">
         <div className="flex flex-col min-w-[70px]">
@@ -176,6 +121,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         </div>
         <input
           type="range"
+          aria-label="Current HP percent"
           min="0"
           max="100"
           value={Math.round(hpPercent)}
@@ -247,8 +193,9 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 };
 
-export default PokemonPanel;
+export default SidePanel;
