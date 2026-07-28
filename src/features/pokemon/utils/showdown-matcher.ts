@@ -136,8 +136,22 @@ export function matchSpecies(query: string, pokemonList: any[]): MatchResult<any
       searchNorm = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
     }
 
-    const exact = pokemonList.find(p => normalize(p.nameEn) === searchNorm || normalize(p.identifier) === searchNorm);
+    const findExact = (norm: string) =>
+      pokemonList.find(p => normalize(p.nameEn) === norm || normalize(p.identifier) === norm);
+
+    const exact = findExact(searchNorm);
     if (exact) return { match: exact, originalQuery: query, resolvedName: exact.nameEn, isFuzzy: false };
+
+    // Gendered species are spelled `Meowstic-F` / `Meowstic-M` by Showdown, and the
+    // male (default) form just `Meowstic`; the dex spells them `Meowstic (Female)` /
+    // `(Male)`. Levenshtein can't bridge that — every one of these scores under the
+    // 0.75 threshold, and `-F` scores *below* the male row — so expand the suffix and
+    // retry the exact match. Alias expansion only: it can never land on another species.
+    const genderNorm = searchNorm.endsWith('f') ? `${searchNorm.slice(0, -1)}female`
+      : searchNorm.endsWith('m') ? `${searchNorm.slice(0, -1)}male`
+      : `${searchNorm}male`;
+    const gendered = findExact(genderNorm);
+    if (gendered) return { match: gendered, originalQuery: query, resolvedName: gendered.nameEn, isFuzzy: true };
 
     // Fuzzy matching English
     let bestMatch: any = null, maxSim = 0.0;

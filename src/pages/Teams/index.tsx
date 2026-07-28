@@ -6,15 +6,15 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
-import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { resolveSets, KIND_LABEL } from '@/features/pokemon/utils/showdown-import';
+import { appDex } from '@/features/pokemon/utils/appDex';
 import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats, pokemonAbilities, abilities, moves } from '@/db/schema';
+import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { useFormat } from '@/features/formats/FormatContext';
-import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
 import { useViewportMode } from '@/hooks/useViewportMode';
@@ -89,108 +89,10 @@ const TeamsPage: React.FC = () => {
   }, [format]);
 
   const handleImportTeam = async (sets: ParsedShowdownSet[], opts?: { name?: string; navigate?: boolean; teamId?: string }) => {
-    const newMembers: PokemonConfig[] = [];
-    const db = await getDb();
-    const corrections: string[] = [];
-    const errors: string[] = [];
-
-    for (const set of sets.slice(0, 6)) {
-      const speciesMatch = matchSpecies(set.species, pokemonList);
-      if (!speciesMatch) {
-        errors.push(`Pokémon: ${set.species}`);
-        continue;
-      }
-      const p = speciesMatch.match;
-      if (speciesMatch.isFuzzy) {
-        corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
-      }
-
-      let abilityResult: { nameEn: string | null; nameZh: string | null }[] = [];
-      try {
-        abilityResult = await db.select({ nameEn: abilities.nameEn, nameZh: abilities.nameZh })
-          .from(pokemonAbilities)
-          .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-          .where(eq(pokemonAbilities.pokemonId, p.id))
-          .orderBy(pokemonAbilities.slot);
-      } catch (e) {}
-
-      const abilityNames = abilityResult.map(a => a.nameEn).filter((name): name is string => !!name);
-      const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
-
-      const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
-      if (set.ability && !resolvedAbility) {
-        errors.push(`Ability: ${set.ability}`);
-      }
-      let activeAbility = abilityResult[0]?.nameEn || null;
-      if (resolvedAbility) {
-        const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
-        if (dbRow?.nameEn) {
-          activeAbility = dbRow.nameEn;
-          if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
-            corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
-          }
-        }
-      }
-
-      const resolvedItem = set.item ? matchItem(set.item) : null;
-      if (set.item && !resolvedItem) {
-        errors.push(`Item: ${set.item}`);
-      }
-      let item = set.item;
-      if (resolvedItem) {
-        item = resolvedItem.match;
-        if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
-          corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
-        }
-      }
-
-      const movesData: (MoveData | null)[] = [];
-      for (const mName of set.moves) {
-        const mm = matchMove(mName, moveList);
-        if (mm) {
-          if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
-            corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
-          }
-          movesData.push(mm.match);
-        } else {
-          errors.push(`Move: ${mName}`);
-          movesData.push(null);
-        }
-      }
-      while (movesData.length < 4) movesData.push(null);
-      const natureStats = getNatureStats(set.nature);
-
-      newMembers.push({
-        selectedId: p.id,
-        type1: p.type1,
-        type2: p.type2,
-        baseHp: p.baseHp,
-        baseAtk: p.baseAttack,
-        baseDef: p.baseDefense,
-        baseSpa: p.baseSpAtk,
-        baseSpd: p.baseSpDef,
-        baseSpe: p.baseSpeed,
-        spHp: set.evs.hp,
-        spAtk: set.evs.atk,
-        spDef: set.evs.def,
-        spSpa: set.evs.spa,
-        spSpd: set.evs.spd,
-        spSpe: set.evs.spe,
-        nature: getFormattedNature(set.nature),
-        boostedStat: natureStats.boostedStat,
-        hinderedStat: natureStats.hinderedStat,
-        moves: movesData.slice(0, 4),
-        activeMoveIndex: 0,
-        abilities: abilityNames,
-        activeAbility,
-        item,
-        hpPercent: 100,
-        isTypeOverridden: false,
-      });
-    }
+    const { members: newMembers, corrections, errors } = await resolveSets(sets.slice(0, 6), appDex(pokemonList, moveList));
 
     if (errors.length > 0) {
-      alert(`The following terms could not be recognized:\n${errors.join('\n')}`);
+      alert(`The following terms could not be recognized:\n${errors.map((e) => `${KIND_LABEL[e.kind]}: ${e.value}`).join('\n')}`);
     }
 
     if (newMembers.length === 0) {

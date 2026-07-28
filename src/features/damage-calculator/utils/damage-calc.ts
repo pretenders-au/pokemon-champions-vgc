@@ -181,14 +181,14 @@ export const normalizeSmogonName = (name: string): string => {
 
   normalized = normalized.replace(/^Mega\s+(.+)$/, '$1-Mega');
 
-  const genderBaseSpecies = ['Basculegion', 'Meowstic', 'Indeedee'];
-  for (const species of genderBaseSpecies) {
-    if (normalized === `${species} (Male)`) {
-      return species;
-    }
-    if (normalized === `${species} (Female)`) {
-      return `${species}-F`;
-    }
+  // Every gendered dex row carries a "(Male)"/"(Female)" suffix. Smogon names the
+  // male form bare and gives a distinct -F species only where the female differs
+  // mechanically; Frillish/Jellicent/Pyroar females are cosmetic, so both map bare.
+  const femaleIsDistinct = ['Basculegion', 'Meowstic', 'Indeedee', 'Oinkologne'];
+  const gendered = normalized.match(/^(.+) \((Male|Female)\)$/);
+  if (gendered) {
+    const [, species, gender] = gendered;
+    return gender === 'Female' && femaleIsDistinct.includes(species) ? `${species}-F` : species;
   }
 
   return normalized;
