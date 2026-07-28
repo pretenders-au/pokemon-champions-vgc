@@ -1,6 +1,7 @@
 /**
- * The Champions SP budget: 32 per stat, 66 across all six. See `CONTEXT.md` > SP and
- * `openspec/specs/ev-sp-conversion-logic`.
+ * The Champions SP budget: 66 across all six stats. See `CONTEXT.md` > SP and
+ * `openspec/specs/sp-limit-constraint`. (The per-stat cap of 32 is not defined here — it
+ * lives in the build reducers' `SET_SP`.)
  *
  * The per-stat cap is enforced centrally, in both build reducers' `SET_SP`. The total is
  * not, and that asymmetry is deliberate: `openspec/specs/sp-limit-constraint` requires the

@@ -139,10 +139,11 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const [isAbilityOpen, setIsAbilityOpen] = useState(false);
   const [hoveredAbilityIndex, setHoveredAbilityIndex] = useState<number | null>(null);
 
+  const spTotal = STATS.reduce((a, s) => a + sp[s.spKey as string], 0);
+
   const setSpVal = (spKey: string, v: number) => {
     const targetVal = Math.max(0, Math.min(SP_MAX, v || 0));
-    const totalSp = STATS.reduce((sum, s) => sum + sp[s.spKey as string], 0);
-    setSp((prev) => ({ ...prev, [spKey]: capSpToBudget(targetVal, totalSp, sp[spKey]) }));
+    setSp((prev) => ({ ...prev, [spKey]: capSpToBudget(targetVal, spTotal, sp[spKey]) }));
   };
   // A lone boost is not a nature: read the multiplier off the nature these two resolve to,
   // so the displayed stat matches what the damage engine will compute.
@@ -172,7 +173,6 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
 
   const evParts = STATS.filter((s) => convertSpToEv(sp[s.spKey as string]) > 0).map((s) => `${convertSpToEv(sp[s.spKey as string])} ${s.ev}`);
   const evTotal = STATS.reduce((a, s) => a + convertSpToEv(sp[s.spKey as string]), 0);
-  const spTotal = STATS.reduce((a, s) => a + sp[s.spKey as string], 0);
 
   const exportShowdown = () => {
     const text = formatShowdownSet(buildConfig(), species?.nameEn ?? 'Pokemon');
