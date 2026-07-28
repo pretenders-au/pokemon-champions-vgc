@@ -5,7 +5,7 @@ import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
-import { convertSpToEv } from '@/features/pokemon/utils/sp-ev-converter';
+import { convertSpToEv, capSpToBudget, isOverSpBudget, SP_TOTAL } from '@/features/pokemon/utils/sp-ev-converter';
 import { getNatureFromStats, getNatureStats, natureMultiplier, natureForStatWheel, natureWheelIndex } from '@/features/pokemon/utils/pokemon-natures';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
@@ -141,13 +141,8 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
 
   const setSpVal = (spKey: string, v: number) => {
     const targetVal = Math.max(0, Math.min(SP_MAX, v || 0));
-    const currentTotalWithoutThis = STATS.reduce((sum, s) => {
-      if (s.spKey === spKey) return sum;
-      return sum + sp[s.spKey as string];
-    }, 0);
-    const maxAllowed = Math.max(0, 66 - currentTotalWithoutThis);
-    const cappedVal = Math.min(targetVal, maxAllowed);
-    setSp((prev) => ({ ...prev, [spKey]: cappedVal }));
+    const totalSp = STATS.reduce((sum, s) => sum + sp[s.spKey as string], 0);
+    setSp((prev) => ({ ...prev, [spKey]: capSpToBudget(targetVal, totalSp, sp[spKey]) }));
   };
   // A lone boost is not a nature: read the multiplier off the nature these two resolve to,
   // so the displayed stat matches what the damage engine will compute.
@@ -435,7 +430,7 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, paddingTop: 9, borderTop: '1px solid var(--line-1)' }}>
             <span style={{ ...micro, letterSpacing: '0.04em' }}>SPs</span>
             <span style={{ flex: 1 }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: spTotal > 66 ? 'var(--danger)' : 'var(--ink-1)' }}>{spTotal} / 66</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: isOverSpBudget(spTotal) ? 'var(--danger)' : 'var(--ink-1)' }}>{spTotal} / {SP_TOTAL}</span>
           </div>
           <div style={{ marginTop: 11, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>

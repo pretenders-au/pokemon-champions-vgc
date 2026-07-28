@@ -2,6 +2,7 @@ import React from 'react';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { calculateHP, calculateStat } from '@/features/damage-calculator/utils/damage-calc';
 import { natureMultiplier, natureWheelIndex } from '@/features/pokemon/utils/pokemon-natures';
+import { isOverSpBudget, SP_TOTAL } from '@/features/pokemon/utils/sp-ev-converter';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
@@ -28,7 +29,7 @@ const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config, p
   const speTotal = calculateStat(config.baseSpe, config.spSpe, natureMultiplier(config.nature, 'spe'), 0, 1.0);
 
   const totalSp = config.spHp + config.spAtk + config.spDef + config.spSpa + config.spSpd + config.spSpe;
-  const isOverLimit = totalSp > 66;
+  const isOverLimit = isOverSpBudget(totalSp);
 
   return (
     <div className="bg-card rounded-xl border border-line p-2">
@@ -49,7 +50,7 @@ const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config, p
       <div className="flex justify-between items-center pt-2 border-t border-line mt-1">
         <span className="text-[8px] font-black text-ink-4 uppercase tracking-tighter">Total SP</span>
         <span className={`text-[10px] font-black ${isOverLimit ? 'text-danger' : 'text-accent'}`}>
-          {totalSp} / 66
+          {totalSp} / {SP_TOTAL}
         </span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import StatConverterRow from '@/components/molecules/StatConverterRow';
 import ProgressBar from '@/components/molecules/ProgressBar';
+import { SP_TOTAL } from '@/features/pokemon/utils/sp-ev-converter';
 
 export interface EvSpread {
   hp: number;
@@ -60,10 +61,10 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
           current={totalEvs} 
           max={510} 
         />
-        <ProgressBar 
-          label="Total SP Generated" 
-          current={totalSp} 
-          max={66} 
+        <ProgressBar
+          label="Total SP Generated"
+          current={totalSp}
+          max={SP_TOTAL}
         />
         
         <div className="flex justify-center pt-4">
