@@ -62,7 +62,7 @@ export interface PokemonConfig {
   form?: 'Shield' | 'Blade';
 }
 
-type PokemonAction =
+export type PokemonAction =
   | { type: 'SET_SP', payload: { key: string, val: number } }
   | { type: 'SET_NATURE', payload: string }
   | { type: 'TOGGLE_NATURE', payload: { stat: string, mod: '+' | '-' } }
@@ -82,7 +82,7 @@ type PokemonAction =
   | { type: 'LOAD_CONFIG', payload: PokemonConfig }
   | { type: 'RESET_STATS' };
 
-const initialPokemonState: PokemonConfig = {
+export const initialPokemonState: PokemonConfig = {
   selectedId: null,
   type1: null,
   type2: null,
@@ -102,7 +102,7 @@ export const AEGISLASH_ID = 681;
 
 
 
-function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonConfig {
+export function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonConfig {
   switch (action.type) {
     case 'SET_SP': {
       const { key, val } = action.payload;
@@ -128,6 +128,8 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpa: p.baseSpAtk,
         baseSpd: p.baseSpDef,
         baseSpe: p.baseSpeed,
+        // A different species is a different build: the spread does not carry over.
+        spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
         nature: 'Hardy',
         moves: [null, null, null, null],
         activeMoveIndex: 0,
@@ -222,6 +224,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         spSpe: preset.sp.spe,
         hpPercent: 100,
         isTypeOverridden: false,
+        form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
       };
     }
     case 'IMPORT_SHOWDOWN_SET': {
@@ -239,6 +242,9 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpe: p.baseSpeed,
         nature: getFormattedNature(set.nature),
         moves: movesData,
+        // The import replaced all four slots — leaving the cursor on the old one points
+        // at a move the user never chose.
+        activeMoveIndex: 0,
         activeAbility: set.ability && abilities.includes(set.ability) ? set.ability : (abilities[0] || null),
         abilities: abilities,
         item: set.item,
@@ -250,12 +256,17 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         spSpe: set.evs.spe,
         hpPercent: 100,
         isTypeOverridden: false,
+        form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
       };
     }
     case 'LOAD_CONFIG': {
+      const config = action.payload;
       return {
-        ...action.payload,
-        nature: getFormattedNature(action.payload.nature)
+        ...config,
+        nature: getFormattedNature(config.nature),
+        // Builds saved before `form` existed carry none. Without this the first
+        // TOGGLE_AEGISLASH_FORM swaps the base stats and calls the result 'Shield'.
+        form: config.form || (config.selectedId === AEGISLASH_ID ? 'Shield' : undefined),
       };
     }
     case 'RESET_STATS': {
