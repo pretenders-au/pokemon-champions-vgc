@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
-import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
+import { convertEvToSp, SP_TOTAL } from '@/features/pokemon/utils/sp-ev-converter';
 import Typography from '@/components/atoms/Typography';
 import { useViewportMode } from '@/hooks/useViewportMode';
 import { RotateToPortrait } from '@/components/RotateToPortrait';
@@ -104,7 +104,7 @@ const EvSpConverterPage: React.FC = () => {
         <ul className="list-disc list-inside space-y-2 text-ink-2 text-sm">
           <li>Max EVs per stat: <strong>252</strong> (yields 32 SP)</li>
           <li>Total EVs allowed: <strong>510</strong></li>
-          <li>Total SP generated: <strong>66</strong> (based on 510 total EVs)</li>
+          <li>Total SP generated: <strong>{SP_TOTAL}</strong> (based on 510 total EVs)</li>
           <li>Minimum EVs for 1 SP: <strong>4</strong></li>
           <li>Subsequent SP points every <strong>8</strong> EVs</li>
         </ul>

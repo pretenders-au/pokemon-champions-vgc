@@ -79,9 +79,16 @@ the display string. Localising that text would change stored data.
 
 ### SP
 
-This project's stat-investment system, in place of EVs. Capped at 32 per stat, 66 total.
+This project's stat-investment system, in place of EVs.
 HP is `base + 75 + SP`; other stats are `floor((base + 20 + SP) × nature)`.
 See `openspec/specs/ev-sp-conversion-logic`.
+
+The two caps are **not** enforced in the same place, and that is deliberate. The per-stat cap
+of 32 is unconditional and lives in both build reducers' `SET_SP`. The 66 total is a *team*
+rule — `openspec/specs/sp-limit-constraint` requires it when editing a Pokémon in a team and
+requires it **not** to apply in the calculator — so it cannot live in the reducers the two
+surfaces share. It is applied by the editing surfaces that opt in, all of which read it
+through `SP_TOTAL` / `capSpToBudget` / `isOverSpBudget` in `sp-ev-converter.ts`.
 
 ## Team
 

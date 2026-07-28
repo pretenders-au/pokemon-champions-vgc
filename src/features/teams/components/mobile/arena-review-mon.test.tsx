@@ -58,6 +58,45 @@ const member = {
   configuration: config,
 } as TeamWithMembers['members'][number];
 
+describe('ArenaReviewMon SP budget', () => {
+  // The team review card enforces the 66-SP team limit (openspec/specs/sp-limit-constraint).
+  // The fixture spends exactly 66 — 32+0+10+11+0+13 — so there is no headroom at all.
+  const renderCard = (onSave: any) =>
+    render(
+      <ArenaReviewMon
+        portrait={false}
+        member={member}
+        teamName="M-B"
+        pokemonList={pokemonList}
+        moveList={moveList}
+        onBack={() => {}}
+        onSave={onSave}
+        saveLabel="Save"
+      />,
+    );
+
+  it('refuses to spend past the budget when it is already full', () => {
+    const onSave = vi.fn();
+    renderCard(onSave);
+    // Atk is at 0 with zero headroom; asking for the per-stat max must change nothing.
+    fireEvent.change(screen.getAllByRole('slider')[1], { target: { value: '32' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save(\s|$)/ }));
+    expect(onSave.mock.calls.at(-1)![0]).toMatchObject({ spAtk: 0 });
+  });
+
+  it('spends only the headroom that is left', () => {
+    const onSave = vi.fn();
+    renderCard(onSave);
+    // Free 10 by zeroing Def, then ask Atk for 32 — it may take exactly those 10.
+    fireEvent.change(screen.getAllByRole('slider')[2], { target: { value: '0' } });
+    fireEvent.change(screen.getAllByRole('slider')[1], { target: { value: '32' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save(\s|$)/ }));
+    const saved = onSave.mock.calls.at(-1)![0];
+    expect(saved).toMatchObject({ spAtk: 10, spDef: 0 });
+    expect(saved.spHp + saved.spAtk + saved.spDef + saved.spSpa + saved.spSpd + saved.spSpe).toBe(66);
+  });
+});
+
 describe('ArenaReviewMon nature cycling', () => {
   const setup = (onSave: any) =>
     render(

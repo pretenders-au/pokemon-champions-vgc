@@ -1,4 +1,4 @@
-import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
+import { convertEvToSp, SP_TOTAL } from '@/features/pokemon/utils/sp-ev-converter';
 
 export interface ParsedShowdownSet {
   species: string;
@@ -96,7 +96,7 @@ export const parseShowdownSet = (exportText: string): ParsedShowdownSet | null =
       // the "EVs:" prefix is ambiguous — fall back to the numeric heuristic there:
       // if all values are <= 32 and total is <= 66, assume they are already SP
       // (standard Showdown EVs go up to 252; a 32 could be 32 EVs or 32 SP).
-      const isAlreadySP = isSpPrefix || (maxValue <= 32 && totalValue <= 66);
+      const isAlreadySP = isSpPrefix || (maxValue <= 32 && totalValue <= SP_TOTAL);
 
       for (const key of Object.keys(tempVals) as Array<keyof typeof parsed.evs>) {
         if (isAlreadySP) {

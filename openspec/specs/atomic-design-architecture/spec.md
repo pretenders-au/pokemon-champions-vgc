@@ -12,7 +12,7 @@ The system SHALL organize all UI components into `Atoms`, `Molecules`, `Organism
 - **THEN** it SHALL be placed in `src/components/organisms/`.
 
 ### Requirement: Pure Presentational Components
-Lower-level components (Atoms and Molecules) SHALL NOT contain business logic, side effects, or complex state.
+Atoms SHALL NOT contain business logic, side effects, or complex state; a component needing any of those SHALL be a Molecule or higher.
 
 #### Scenario: Passing data to a Molecule
 - **WHEN** a Molecule needs to display data
