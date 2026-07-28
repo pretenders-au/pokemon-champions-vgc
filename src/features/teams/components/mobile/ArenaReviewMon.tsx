@@ -23,7 +23,9 @@ export interface ArenaReviewMonProps {
   saveLabel?: string;
   /** Optional content rendered directly under the header — e.g. the scan flow's species-correction band. */
   banner?: React.ReactNode;
-  /** Stack the moves and stats columns instead of placing them side by side. */
+  /** Stack the moves and stats columns instead of placing them side by side.
+   *  Desktop passes false on purpose — side by side fits without scrolling
+   *  there too. See docs/adr/0002. */
   portrait: boolean;
 }
 
