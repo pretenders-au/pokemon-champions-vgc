@@ -95,6 +95,20 @@ Reading a game screenshot to recover Pokémon. Two kinds, and they are not inter
 The opponent species confirmed for the current battle. Once locked it masks later scans and
 narrows the calculator's defender choices.
 
+Three screens confirm one — the overlay bubble popup, the Scan-opponent page and the
+calculator's scan modal — and all three share one model, `features/scan/roster.ts`. They must:
+a scan result cannot be trustworthy on one screen and doubtful on another, and a roster
+confirmed in one place is the same roster.
+
+A team cannot field the same species twice (Species Clause), so a duplicate **within one side**
+is always a misread and the seed re-picks it, choosing the combination with the most identified
+slots and then the highest total confidence. Both teams may bring the same Pokémon, so the
+sides are solved separately and a mirror match survives.
+
+A team-preview scan reports **both** sides. Only the opponent's is persisted — a preview where
+fewer than six opponent cards were detected leaves player slots among the first six, so the
+side filter lives in `opponentIdsFromEntries` rather than in each caller.
+
 ## Decisions
 
 Architectural decisions that constrain the above are recorded in `docs/adr/`.

@@ -97,6 +97,23 @@ describe('ConfirmRosterView', () => {
     expect(onConfirm).toHaveBeenCalledWith([591]);
   });
 
+  it('scores the selected candidate, so a re-picked weak slot still shows its confidence', () => {
+    // Both slots top Garchomp; Species Clause means one is wrong, so slot 2 falls to its
+    // second candidate. The tile must report that candidate's score, not the rejected one's.
+    render(
+      <ConfirmRosterView
+        slots={[slot([{ id: 445, score: 0.92 }]), slot([{ id: 445, score: 0.88 }, { id: 149, score: 0.40 }])]}
+        pokemonList={list}
+        onConfirm={vi.fn()}
+        onRescan={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getAllByText('Dragonite').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('40%').length).toBeGreaterThan(0);
+    expect(screen.queryByText('88%')).toBeNull();
+  });
+
   it('caps the detected grid at 6 slots', () => {
     const seven = [445, 149, 823, 591, 445, 149, 823].map((id, i) => slot([{ id, score: 0.9 }], i));
     render(

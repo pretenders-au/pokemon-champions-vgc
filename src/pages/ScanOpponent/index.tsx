@@ -14,17 +14,15 @@ import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
 import {
-  assignUniqueCandidates,
+  seedRoster,
+  LOW_CONFIDENCE,
   availableCandidatesFor,
   opponentIdsFromEntries,
   unavailableIdsFor,
   updateEntryId,
   type ScanEntry,
-} from './roster';
+} from '@/features/scan/roster';
 
-export { opponentIdsFromEntries, type ScanEntry } from './roster';
-
-const LOW_CONFIDENCE = 0.9;
 
 const micro: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)',
@@ -90,8 +88,7 @@ const ScanOpponentPage: React.FC = () => {
   // Seed the editable roster from the opponent slots once a scan completes.
   useEffect(() => {
     if (status !== 'done') return;
-    const opp = slots.filter((s) => s.side !== 'player');
-    const nextRoster = assignUniqueCandidates(opp);
+    const nextRoster = seedRoster(slots).filter((e) => e.side !== 'player');
     setRoster(nextRoster);
     const flagged = nextRoster.findIndex((entry) => {
       const score = entry.candidates.find((candidate) => candidate.id === entry.id)?.score ?? 0;

@@ -3,6 +3,7 @@
 // right, pinned Confirm & save footer. Parent remounts (key) per scan.
 import React, { useMemo, useState } from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import { seedRoster, updateEntryId, availableCandidatesFor, unavailableIdsFor, opponentIdsFromEntries, LOW_CONFIDENCE, type ScanEntry } from '@/features/scan/roster';
 import { Icon } from '@/design-system/arena';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
@@ -15,7 +16,6 @@ interface ConfirmRosterViewProps {
   onClose: () => void;
 }
 
-const LOW_CONFIDENCE = 0.75;
 const micro: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)',
 };
@@ -25,7 +25,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
   // The design shows exactly the six team-preview slots; drop scanner noise.
   const shown = useMemo(() => slots.slice(0, 6), [slots]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
-  const [picks, setPicks] = useState<(number | null)[]>(() => shown.map((s) => s.candidates[0]?.id ?? null));
+  const [entries, setEntries] = useState<ScanEntry[]>(() => seedRoster(shown));
   // Pre-select the least-confident slot for review, like the design.
   const [fixing, setFixing] = useState<number>(() => {
     let idx = 0;
@@ -36,31 +36,36 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
   const [query, setQuery] = useState('');
 
   const nameOf = (id: number | null) => (id == null ? 'Unknown' : byId.get(id)?.nameEn ?? `#${id}`);
-  const setPick = (slotIdx: number, id: number) => setPicks((prev) => prev.map((p, i) => (i === slotIdx ? id : p)));
-  const ids = picks.filter((p): p is number => p != null);
+  const setPick = (slotIdx: number, id: number) => setEntries((prev) => updateEntryId(prev, slotIdx, id));
+  const ids = opponentIdsFromEntries(entries);
 
   // Live dex matches while typing: startsWith hits first, then contains.
   const q = query.trim().toLowerCase();
   const matches = useMemo(() => {
     if (!q) return [];
+    const taken = unavailableIdsFor(entries, fixing);
     const starts: PokemonBaseStats[] = [];
     const contains: PokemonBaseStats[] = [];
     for (const p of pokemonList) {
+      if (taken.has(p.id)) continue;
       const en = p.nameEn.toLowerCase();
       if (en.startsWith(q)) starts.push(p);
       else if (en.includes(q) || (p.nameZh ?? '').includes(query.trim()) || p.identifier.includes(q)) contains.push(p);
     }
     return [...starts, ...contains].slice(0, 12);
-  }, [q, query, pokemonList]);
+  }, [q, query, pokemonList, entries, fixing]);
 
   const pickAndClear = (id: number) => { setPick(fixing, id); setQuery(''); };
   const applyTyped = () => { if (matches.length > 0) pickAndClear(matches[0].id); };
 
   const slotState = (i: number) => {
-    const top = shown[i].candidates[0];
-    const manual = picks[i] != null && picks[i] !== top?.id;
-    const low = !manual && (top?.score ?? 0) < LOW_CONFIDENCE;
-    return { manual, low };
+    const entry = entries[i];
+    // Score the candidate actually selected, not the raw top one: a slot re-picked by the
+    // uniqueness assignment must still be flagged if that replacement is a weak read.
+    const chosen = entry.candidates.find((c) => c.id === entry.id) ?? entry.candidates[0];
+    const manual = entry.id != null && !entry.candidates.some((c) => c.id === entry.id);
+    const low = !manual && (chosen?.score ?? 0) < LOW_CONFIDENCE;
+    return { manual, low, chosen };
   };
 
   return (
@@ -102,12 +107,12 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
               {shown.map((s, i) => {
-                const { manual, low } = slotState(i);
+                const { manual, low, chosen } = slotState(i);
                 const sel = fixing === i;
                 return (
                   <button
                     key={i}
-                    aria-label={`Fix ${nameOf(picks[i])}`}
+                    aria-label={`Fix ${nameOf(entries[i].id)}`}
                     onClick={() => setFixing(i)}
                     style={{
                       display: 'flex', flexDirection: 'column', gap: 2, padding: 8, borderRadius: 'var(--r-md)', cursor: 'pointer',
@@ -122,15 +127,15 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                         background: low ? 'var(--field-soft)' : manual ? 'var(--accent-soft)' : 'var(--safe-soft)',
                         border: `1px solid ${low ? 'var(--field-line)' : manual ? 'var(--accent-soft-line)' : 'var(--safe-line)'}`,
                       }}>
-                        {manual ? 'Set' : s.candidates[0] ? pct(s.candidates[0].score) : '—'}
+                        {manual ? 'Set' : chosen ? pct(chosen.score) : '—'}
                       </span>
                       <Icon name={low ? 'alert-triangle' : 'check'} size={13} color={low ? 'var(--field)' : 'var(--safe)'} />
                     </div>
                     <div style={{ width: '100%', height: 52, display: 'grid', placeItems: 'center', margin: '2px 0' }}>
-                      {picks[i] != null && <PokemonImage id={picks[i]!} name={nameOf(picks[i])} className="w-12 h-12" />}
+                      {entries[i].id != null && <PokemonImage id={entries[i].id!} name={nameOf(entries[i].id)} className="w-12 h-12" />}
                     </div>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-                      {nameOf(picks[i])}
+                      {nameOf(entries[i].id)}
                     </div>
                   </button>
                 );
@@ -167,7 +172,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                 <div style={micro}>Matches</div>
                 <div className="ac-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 190, overflowY: 'auto' }}>
                   {matches.map((p) => {
-                    const on = picks[fixing] === p.id;
+                    const on = entries[fixing].id === p.id;
                     return (
                       <button
                         key={p.id}
@@ -195,8 +200,8 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
               <>
                 <div style={micro}>Top candidates</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {shown[fixing]?.candidates.slice(0, 3).map((c) => {
-                    const on = picks[fixing] === c.id;
+                  {availableCandidatesFor(entries, fixing).slice(0, 3).map((c) => {
+                    const on = entries[fixing].id === c.id;
                     return (
                       <button
                         key={c.id}
