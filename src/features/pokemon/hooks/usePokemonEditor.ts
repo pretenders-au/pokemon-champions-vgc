@@ -1,7 +1,5 @@
 import { useReducer, useCallback, useEffect, useState } from 'react';
-import { getDb } from '@/db';
-import { pokemonAbilities, abilities } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { pokemonRepository } from '@/db/repositories/pokemon.repo';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
@@ -291,16 +289,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     dispatch({ type: 'SELECT_POKEMON', payload: { pokemon: p } });
     
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({
-        name: abilities.nameEn
-      })
-      .from(pokemonAbilities)
-      .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-      .where(eq(pokemonAbilities.pokemonId, p.id))
-      .orderBy(pokemonAbilities.slot);
-
-      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      const abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
       dispatch({ type: 'SET_ABILITIES', payload: { abilities: abilityNames } });
       return abilityNames;
     } catch (error) {
@@ -315,13 +304,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     
     let abilityNames: string[] = [];
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
     } catch (e) {
       console.error('Failed to fetch abilities for preset:', e);
     }
@@ -374,13 +357,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
 
     let abilityNames: string[] = [];
     try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
     } catch (e) {}
 
     const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);

@@ -19,7 +19,10 @@ const detectPlayerPanelsMock = vi.hoisted(() => vi.fn((): unknown => null));
 const createTeamMock = vi.hoisted(() => vi.fn(async () => 'team-1'));
 
 vi.mock('./overlayBridge', () => ({ overlayBridge: bridgeMock }));
-vi.mock('./usePokemonList', () => ({ usePokemonList: () => [mon(445, 'Garchomp'), mon(823, 'Corviknight')] }));
+vi.mock('@/features/pokemon/hooks/useDex', () => ({
+  usePokemonList: () => [mon(445, 'Garchomp'), mon(823, 'Corviknight')],
+  useMoveList: () => [],
+}));
 vi.mock('../formats/FormatContext', () => ({ useFormat: () => ({ format: 'reg-h' }) }));
 vi.mock('../scan/scanFrame', async (importOriginal) => {
   const orig = await importOriginal<any>();
@@ -31,7 +34,6 @@ vi.mock('../scan/scanFrame', async (importOriginal) => {
   };
 });
 vi.mock('../scan/playerPanels', () => ({ detectPlayerPanels: detectPlayerPanelsMock }));
-vi.mock('./useMoveList', () => ({ useMoveList: () => [] }));
 vi.mock('@/features/teams/hooks/useTeams', () => ({
   useTeams: () => ({
     teams: [], loading: false, error: null,

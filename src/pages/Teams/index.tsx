@@ -8,11 +8,7 @@ import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { resolveSets, KIND_LABEL } from '@/features/pokemon/utils/showdown-import';
 import { appDex } from '@/features/pokemon/utils/appDex';
-import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
-import { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { usePokemonList, useMoveList } from '@/features/pokemon/hooks/useDex';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { useFormat } from '@/features/formats/FormatContext';
 import { useToast } from '@/hooks/useToast';
@@ -32,8 +28,8 @@ const TeamsPage: React.FC = () => {
   // the ArenaAddTeam screen in place of the team list.
   const onNewTeamRoute = location.pathname.endsWith('/teams/new');
 
-  const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
-  const [moveList, setMoveList] = useState<MoveData[]>([]);
+  const pokemonList = usePokemonList(format);
+  const moveList = useMoveList();
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const { toast } = useToast();
@@ -52,41 +48,6 @@ const TeamsPage: React.FC = () => {
     }
     prevTeamCount.current = teams.length;
   }, [teams, creatingTeam]);
-
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      try {
-        const db = await getDb();
-        const [pokeResult, moveResult] = await Promise.all([
-          db.select({
-            id: pokemon.id,
-            identifier: pokemon.identifier,
-            nameEn: pokemon.nameEn,
-            nameZh: pokemon.nameZh,
-            type1: pokemon.type1,
-            type2: pokemon.type2,
-            baseHp: pokemon.baseHp,
-            baseAttack: pokemon.baseAttack,
-            baseDefense: pokemon.baseDefense,
-            baseSpAtk: pokemon.baseSpAtk,
-            baseSpDef: pokemon.baseSpDef,
-            baseSpeed: pokemon.baseSpeed,
-          })
-          .from(pokemon)
-          .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
-          .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, format)),
-          db.select().from(moves)
-        ]);
-
-        setPokemonList(pokeResult as PokemonBaseStats[]);
-        setMoveList(moveResult as MoveData[]);
-      } catch (error) {
-        console.error('Failed to fetch pokemon list:', error);
-      }
-    };
-    fetchMetadata();
-  }, [format]);
 
   const handleImportTeam = async (sets: ParsedShowdownSet[], opts?: { name?: string; navigate?: boolean; teamId?: string }) => {
     const { members: newMembers, corrections, errors } = await resolveSets(sets.slice(0, 6), appDex(pokemonList, moveList));
