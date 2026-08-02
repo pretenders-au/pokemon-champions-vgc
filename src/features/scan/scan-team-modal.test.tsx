@@ -48,11 +48,11 @@ describe('ScanTeamModal roster seeding', () => {
   });
 
   it('keeps the same species on opposite sides — a mirror match is legal', () => {
-    // Both rows only render in battle mode; a team-preview scan hides your own side.
+    // Both cards only render in battle mode; a team-preview scan hides your own side.
     mode = 'battle';
     slots = [slot('opponent', [1, 0.9]), slot('player', [1, 0.9])];
     open(calcHost());
-    expect(screen.getAllByText('Incineroar')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Fix Incineroar/ })).toHaveLength(2);
   });
 
   it('confirms unique opponent ids, excluding the player side', () => {
@@ -93,11 +93,15 @@ describe('ScanTeamModal host modes', () => {
 
   it('the calc host on a battle scan shows both sides and drops the confirm button', () => {
     // A battle screen is not a roster — it shows who is out right now, so it loads
-    // sides instead of confirming six.
+    // sides instead of confirming six. Side actions live in the fix panel and
+    // follow the selected card: opponent slots load the defender, player slots
+    // the attacker.
     mode = 'battle';
     slots = [slot('opponent', [1, 0.9]), slot('player', [2, 0.9])];
     open(calcHost());
     expect(screen.getByRole('button', { name: /set as defender/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /set as attacker/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Fix Rillaboom/ }));
     expect(screen.getByRole('button', { name: /set as attacker/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /confirm opponent team/i })).toBeNull();
   });
