@@ -4,19 +4,16 @@ import { usePokemonList } from '@/features/pokemon/hooks/useDex';
 import { useFormat } from '@/features/formats/FormatContext';
 import { Icon } from '@/design-system/arena';
 import PokemonImage from '@/components/atoms/PokemonImage';
-import PokemonImagePicker from '@/features/scan/PokemonImagePicker';
 import CropStep from '@/features/scan/CropStep';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
+import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from '@/features/scan/ScanConfirmView';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { normalizeImageBlob } from '@/features/scan/imageLoading';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
 import {
   seedRoster,
-  LOW_CONFIDENCE,
-  availableCandidatesFor,
   opponentIdsFromEntries,
-  unavailableIdsFor,
   updateEntryId,
   type ScanEntry,
 } from '@/features/scan/roster';
@@ -53,23 +50,18 @@ const ScanOpponentPage: React.FC = () => {
   const { status, slots, error, scan, reset } = useTeamScan(legalIds);
 
   const [roster, setRoster] = useState<ScanEntry[]>([]);
-  const [selected, setSelected] = useState(0);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
   const [cropping, setCropping] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Seed the editable roster from the opponent slots once a scan completes.
+  // Seed the editable roster from the opponent slots once a scan completes,
+  // capped to the six the grid displays so confirm-and-save can only persist
+  // what the user can see. (Which slot to review first is ScanConfirmView's
+  // business now.)
   useEffect(() => {
-    if (status !== 'done') return;
-    const nextRoster = seedRoster(slots).filter((e) => e.side !== 'player');
-    setRoster(nextRoster);
-    const flagged = nextRoster.findIndex((entry) => {
-      const score = entry.candidates.find((candidate) => candidate.id === entry.id)?.score ?? 0;
-      return score < LOW_CONFIDENCE;
-    });
-    setSelected(flagged >= 0 ? flagged : 0);
-    setPickerOpen(false);
+    if (status === 'done') {
+      setRoster(seedRoster(slots).filter((e) => e.side !== 'player').slice(0, SCAN_CONFIRM_MAX_SLOTS));
+    }
   }, [status, slots]);
 
   const runScan = async (blob: Blob) => {
@@ -95,15 +87,6 @@ const ScanOpponentPage: React.FC = () => {
 
   const setEntryId = (index: number, id: number | null) =>
     setRoster((entries) => updateEntryId(entries, index, id));
-
-  const selectedCandidates = useMemo(
-    () => availableCandidatesFor(roster, selected),
-    [roster, selected],
-  );
-  const disabledPickerIds = useMemo(
-    () => unavailableIdsFor(roster, selected),
-    [roster, selected],
-  );
 
   const confirmAndSave = () => {
     const ids = opponentIdsFromEntries(roster);
@@ -224,92 +207,8 @@ const ScanOpponentPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1fr)', gap: 14, height: '100%', minHeight: 0 }}>
-            {/* detected grid — scrolls independently of the fix panel */}
-            <div style={{ minWidth: 0, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-                <div style={micro}>Detected team</div>
-                <span style={{ flex: 1 }} />
-                <span style={{ fontSize: 10.5, color: 'var(--ink-4)' }}>Tap a card to review</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {roster.map((e, i) => {
-                  const top = e.candidates.find((c) => c.id === e.id) ?? e.candidates[0];
-                  const score = top?.score ?? 0;
-                  const manual = e.id != null && !e.candidates.some((c) => c.id === e.id);
-                  const low = !manual && score < LOW_CONFIDENCE;
-                  const sel = i === selected;
-                  const fg = low ? 'var(--field)' : manual ? 'var(--accent)' : 'var(--safe)';
-                  const bg = low ? 'var(--field-soft)' : manual ? 'var(--accent-soft)' : 'var(--safe-soft)';
-                  const line = low ? 'var(--field-line)' : manual ? 'var(--accent-soft-line)' : 'var(--safe-line)';
-                  const name = e.id != null ? byId.get(e.id)?.nameEn ?? '—' : '—';
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => { setSelected(i); setPickerOpen(false); }}
-                      style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: 8, borderRadius: 'var(--r-md)', cursor: 'pointer', background: sel ? 'var(--accent-soft)' : 'var(--surface-card)', border: `1px solid ${sel ? 'var(--accent-soft-line)' : 'var(--line-1)'}` }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, color: fg, background: bg, border: `1px solid ${line}` }}>{manual ? 'Set' : `${Math.round(score * 100)}%`}</span>
-                        <Icon name={low ? 'alert-triangle' : 'check'} size={13} color={fg} />
-                      </div>
-                      <div style={{ width: '100%', height: 52, display: 'grid', placeItems: 'center', margin: '2px 0' }}>
-                        {e.id != null ? <PokemonImage id={e.id} name={name} className="w-12 h-12" /> : <div style={{ width: 50, height: 50, borderRadius: 8, background: 'var(--surface-inset)' }} />}
-                      </div>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* fix-detection panel for the selected slot — scrolls independently */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon name="scan-line" size={15} color="var(--accent)" />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>Fix detection</span>
-                <span style={{ flex: 1 }} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 999, padding: '2px 8px' }}>Slot {selected + 1}</span>
-              </div>
-
-              <div style={micro}>Top candidates</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {selectedCandidates.length === 0 && (
-                  <div style={{ fontSize: 11.5, color: 'var(--ink-4)' }}>No suggestions — type a name below.</div>
-                )}
-                {selectedCandidates.map((c) => {
-                  const on = roster[selected]?.id === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => setEntryId(selected, c.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer', background: on ? 'var(--accent-soft)' : 'var(--surface-inset)', border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}` }}
-                    >
-                      <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 999, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--accent)' : 'var(--line-3)'}` }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 999, background: on ? 'var(--accent)' : 'transparent' }} />
-                      </span>
-                      <div style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
-                        <PokemonImage id={c.id} name={byId.get(c.id)?.nameEn ?? 'pokemon'} className="w-8 h-8" />
-                      </div>
-                      <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'left' }}>{byId.get(c.id)?.nameEn ?? '—'}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: c.score >= 0.6 ? 'var(--safe)' : c.score >= 0.2 ? 'var(--field)' : 'var(--ink-4)' }}>{Math.round(c.score * 100)}%</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ ...micro, marginTop: 2 }}>Or type a name</div>
-              {pickerOpen ? (
-                <PokemonImagePicker
-                  pokemonList={pokemonList}
-                  selectedId={roster[selected]?.id ?? null}
-                  disabledIds={disabledPickerIds}
-                  onSelect={(id) => { setEntryId(selected, id); setPickerOpen(false); }}
-                />
-              ) : (
-                <button style={{ ...ghostBtn, justifyContent: 'center', minHeight: 36 }} onClick={() => setPickerOpen(true)}>Search the Pokédex</button>
-              )}
-            </div>
+          <div style={{ height: '100%', minHeight: 0 }}>
+            <ScanConfirmView entries={roster} pokemonList={pokemonList} onPick={setEntryId} size="compact" />
           </div>
         )}
       </div>

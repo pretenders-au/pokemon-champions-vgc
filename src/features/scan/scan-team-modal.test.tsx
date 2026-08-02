@@ -48,11 +48,11 @@ describe('ScanTeamModal roster seeding', () => {
   });
 
   it('keeps the same species on opposite sides — a mirror match is legal', () => {
-    // Both rows only render in battle mode; a team-preview scan hides your own side.
+    // Both cards only render in battle mode; a team-preview scan hides your own side.
     mode = 'battle';
     slots = [slot('opponent', [1, 0.9]), slot('player', [1, 0.9])];
     open(calcHost());
-    expect(screen.getAllByText('Incineroar')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Fix Incineroar/ })).toHaveLength(2);
   });
 
   it('confirms unique opponent ids, excluding the player side', () => {
@@ -61,6 +61,15 @@ describe('ScanTeamModal roster seeding', () => {
     open(host);
     fireEvent.click(screen.getByRole('button', { name: /lock|confirm/i }));
     expect(host.onConfirmRoster).toHaveBeenCalledWith([1, 2]);
+  });
+
+  it('confirms only the six displayed slots — scanner noise past 6 never leaks in', () => {
+    // Seven opponent reads: the grid shows six, so confirm must not include the seventh.
+    slots = [1, 2, 3, 4, 5, 6, 7].map((id) => slot('opponent', [id, 0.9]));
+    const host = calcHost();
+    open(host);
+    fireEvent.click(screen.getByRole('button', { name: /confirm opponent team/i }));
+    expect(host.onConfirmRoster).toHaveBeenCalledWith([1, 2, 3, 4, 5, 6]);
   });
 });
 
@@ -93,11 +102,15 @@ describe('ScanTeamModal host modes', () => {
 
   it('the calc host on a battle scan shows both sides and drops the confirm button', () => {
     // A battle screen is not a roster — it shows who is out right now, so it loads
-    // sides instead of confirming six.
+    // sides instead of confirming six. Side actions live in the fix panel and
+    // follow the selected card: opponent slots load the defender, player slots
+    // the attacker.
     mode = 'battle';
     slots = [slot('opponent', [1, 0.9]), slot('player', [2, 0.9])];
     open(calcHost());
     expect(screen.getByRole('button', { name: /set as defender/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /set as attacker/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Fix Rillaboom/ }));
     expect(screen.getByRole('button', { name: /set as attacker/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /confirm opponent team/i })).toBeNull();
   });
