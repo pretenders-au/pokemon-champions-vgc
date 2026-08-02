@@ -1,6 +1,6 @@
 import type { RgbaImage } from './types';
 
-export async function blobToRgbaImage(blob: Blob): Promise<RgbaImage> {
+async function decodeViaImg(blob: Blob): Promise<RgbaImage> {
   // Decode via an <img> element rather than createImageBitmap: Safari/WebKit
   // rejects some blobs from createImageBitmap with "The string did not match the
   // expected pattern", and the <img> path works across browsers.
@@ -22,5 +22,29 @@ export async function blobToRgbaImage(blob: Blob): Promise<RgbaImage> {
     return { data, width, height };
   } finally {
     URL.revokeObjectURL(url);
+  }
+}
+
+// ISO BMFF brands that mean "HEIF family" — covers iPhone .heic photos.
+const HEIC_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'];
+
+export async function isHeicBlob(blob: Blob): Promise<boolean> {
+  // Sniff magic bytes ('ftyp' + brand) — blob.type is often empty for picked files.
+  const head = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+  if (head.length < 12) return false;
+  const ascii = (from: number, to: number) => String.fromCharCode(...head.subarray(from, to));
+  return ascii(4, 8) === 'ftyp' && HEIC_BRANDS.includes(ascii(8, 12));
+}
+
+export async function blobToRgbaImage(blob: Blob): Promise<RgbaImage> {
+  try {
+    return await decodeViaImg(blob);
+  } catch (err) {
+    // Chromium/Firefox can't decode HEIC (iPhone photos); convert via wasm and
+    // retry. Dynamic import keeps the decoder out of the main bundle.
+    if (!(await isHeicBlob(blob))) throw err;
+    const { default: heic2any } = await import('heic2any');
+    const png = (await heic2any({ blob, toType: 'image/png' })) as Blob;
+    return await decodeViaImg(png);
   }
 }
