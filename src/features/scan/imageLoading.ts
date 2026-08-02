@@ -36,15 +36,25 @@ export async function isHeicBlob(blob: Blob): Promise<boolean> {
   return ascii(4, 8) === 'ftyp' && HEIC_BRANDS.includes(ascii(8, 12));
 }
 
+/**
+ * Chromium/Firefox can't decode HEIC (iPhone photos), so a HEIC blob breaks
+ * both scanning and <img> previews (e.g. CropStep). Convert to PNG via wasm;
+ * anything else passes through untouched. Dynamic import keeps the decoder
+ * out of the main bundle.
+ */
+export async function normalizeImageBlob(blob: Blob): Promise<Blob> {
+  if (!(await isHeicBlob(blob))) return blob;
+  const { default: heic2any } = await import('heic2any');
+  return (await heic2any({ blob, toType: 'image/png' })) as Blob;
+}
+
 export async function blobToRgbaImage(blob: Blob): Promise<RgbaImage> {
   try {
     return await decodeViaImg(blob);
   } catch (err) {
-    // Chromium/Firefox can't decode HEIC (iPhone photos); convert via wasm and
-    // retry. Dynamic import keeps the decoder out of the main bundle.
-    if (!(await isHeicBlob(blob))) throw err;
-    const { default: heic2any } = await import('heic2any');
-    const png = (await heic2any({ blob, toType: 'image/png' })) as Blob;
-    return await decodeViaImg(png);
+    // Safety net for ingress paths that skipped normalizeImageBlob.
+    const converted = await normalizeImageBlob(blob);
+    if (converted === blob) throw err;
+    return await decodeViaImg(converted);
   }
 }

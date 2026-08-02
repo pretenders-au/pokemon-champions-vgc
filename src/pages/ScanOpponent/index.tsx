@@ -9,6 +9,7 @@ import CropStep from '@/features/scan/CropStep';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
+import { normalizeImageBlob } from '@/features/scan/imageLoading';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
 import {
   seedRoster,
@@ -71,7 +72,10 @@ const ScanOpponentPage: React.FC = () => {
     setPickerOpen(false);
   }, [status, slots]);
 
-  const runScan = async (blob: Blob) => { setPendingBlob(blob); setSaved(false); await scan(blob); };
+  const runScan = async (blob: Blob) => {
+    blob = await normalizeImageBlob(blob); // dropped/pasted HEIC -> displayable PNG
+    setPendingBlob(blob); setSaved(false); await scan(blob);
+  };
   const pickFile = async () => { const f = await filePickerSource.capture(); if (f) await runScan(f.blob); };
   const pickCamera = async () => { const f = await cameraSource.capture(); if (f) await runScan(f.blob); };
   const pasteImage = async () => {
