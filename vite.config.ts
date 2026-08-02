@@ -5,9 +5,10 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 // Native (Capacitor) build uses base '/' since the Android WebView serves dist
-// from https://localhost/; the web build keeps the GitHub Pages project base.
+// from https://localhost/; Vercel serves from the domain root (VERCEL=1 is set
+// by its build env); the GitHub Pages web build keeps the project base.
 export default defineConfig(({ mode }) => ({
-  base: mode === 'capacitor' ? '/' : '/pokemon-champions-vgc/',
+  base: mode === 'capacitor' || process.env.VERCEL ? '/' : '/pokemon-champions-vgc/',
   // Honor the harness-assigned port (Vite ignores PORT natively)
   server: process.env.PORT ? { port: Number(process.env.PORT), strictPort: true } : undefined,
   plugins: [
