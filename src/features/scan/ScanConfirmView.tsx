@@ -33,6 +33,11 @@ const SIZES = {
   roomy: { cardPad: 10, badgeFs: 11.5, imgCell: 60, imgCls: 'w-14 h-14', nameFs: 12, headFs: 14, headIcon: 16, rowNameFs: 13, inputFs: 13, micro: 11 },
 } as const;
 
+/** The design shows exactly the six team-preview slots. Hosts that consume the
+ *  roster (confirm/save/import) must apply the same cap — an entry the grid
+ *  hides must never be silently confirmed. */
+export const SCAN_CONFIRM_MAX_SLOTS = 6;
+
 const pct = (score: number) => `${Math.max(0, Math.min(99, Math.round(score * 100)))}%`;
 
 const ScanConfirmView: React.FC<ScanConfirmViewProps> = ({
@@ -43,20 +48,32 @@ const ScanConfirmView: React.FC<ScanConfirmViewProps> = ({
     fontSize: s.micro, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)',
   };
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
-  // The design shows exactly the six team-preview slots — drop scanner noise.
-  const shown = useMemo(() => (indexes ?? entries.map((_, i) => i)).slice(0, 6), [indexes, entries]);
+  const shown = useMemo(
+    () => (indexes ?? entries.map((_, i) => i)).slice(0, SCAN_CONFIRM_MAX_SLOTS),
+    [indexes, entries],
+  );
 
   // The slot under review: the user's explicit card pick wins; otherwise the
   // least-confident displayed slot. Derived (not frozen at mount) because hosts
   // may seed entries after this view mounts, and re-deriving after a fix
   // advances review to the next doubtful slot.
   const [picked, setPicked] = useState<number | null>(null);
+  // An index-based pick can't survive the roster growing or shrinking — snap
+  // back to the derived slot when the entry count changes. This is what makes
+  // Remove safe (indexes shift down) and +Add focus the new empty slot.
+  const [seenCount, setSeenCount] = useState(entries.length);
+  if (entries.length !== seenCount) { setSeenCount(entries.length); setPicked(null); }
   const derived = useMemo(() => {
     let idx = shown[0] ?? 0;
     let min = Infinity;
     for (const i of shown) {
       const e = entries[i];
-      const sc = e?.candidates.find((c) => c.id === e.id)?.score ?? -1;
+      // Empty slots need attention most; a manual (searched) pick is
+      // human-confirmed and needs it least; scanner reads rank between the
+      // two by their confidence.
+      const sc = e == null || e.id == null
+        ? -1
+        : e.candidates.find((c) => c.id === e.id)?.score ?? Infinity;
       if (sc < min) { min = sc; idx = i; }
     }
     return idx;

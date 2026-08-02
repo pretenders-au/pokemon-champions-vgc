@@ -62,6 +62,15 @@ describe('ScanTeamModal roster seeding', () => {
     fireEvent.click(screen.getByRole('button', { name: /lock|confirm/i }));
     expect(host.onConfirmRoster).toHaveBeenCalledWith([1, 2]);
   });
+
+  it('confirms only the six displayed slots — scanner noise past 6 never leaks in', () => {
+    // Seven opponent reads: the grid shows six, so confirm must not include the seventh.
+    slots = [1, 2, 3, 4, 5, 6, 7].map((id) => slot('opponent', [id, 0.9]));
+    const host = calcHost();
+    open(host);
+    fireEvent.click(screen.getByRole('button', { name: /confirm opponent team/i }));
+    expect(host.onConfirmRoster).toHaveBeenCalledWith([1, 2, 3, 4, 5, 6]);
+  });
 });
 
 describe('ScanTeamModal host modes', () => {

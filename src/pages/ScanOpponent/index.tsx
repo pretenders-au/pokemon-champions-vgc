@@ -6,7 +6,7 @@ import { Icon } from '@/design-system/arena';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import CropStep from '@/features/scan/CropStep';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
-import ScanConfirmView from '@/features/scan/ScanConfirmView';
+import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from '@/features/scan/ScanConfirmView';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { normalizeImageBlob } from '@/features/scan/imageLoading';
@@ -54,10 +54,14 @@ const ScanOpponentPage: React.FC = () => {
   const [cropping, setCropping] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Seed the editable roster from the opponent slots once a scan completes.
-  // (Which slot to review first is ScanConfirmView's business now.)
+  // Seed the editable roster from the opponent slots once a scan completes,
+  // capped to the six the grid displays so confirm-and-save can only persist
+  // what the user can see. (Which slot to review first is ScanConfirmView's
+  // business now.)
   useEffect(() => {
-    if (status === 'done') setRoster(seedRoster(slots).filter((e) => e.side !== 'player'));
+    if (status === 'done') {
+      setRoster(seedRoster(slots).filter((e) => e.side !== 'player').slice(0, SCAN_CONFIRM_MAX_SLOTS));
+    }
   }, [status, slots]);
 
   const runScan = async (blob: Blob) => {

@@ -4,7 +4,7 @@
 // actions. Parent remounts (key) per scan.
 import React, { useMemo, useState } from 'react';
 import { seedRoster, updateEntryId, opponentIdsFromEntries, type ScanEntry } from '@/features/scan/roster';
-import ScanConfirmView from '@/features/scan/ScanConfirmView';
+import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from '@/features/scan/ScanConfirmView';
 import { Icon } from '@/design-system/arena';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
@@ -18,8 +18,9 @@ interface ConfirmRosterViewProps {
 }
 
 const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonList, onConfirm, onRescan, onClose }) => {
-  // The design shows exactly the six team-preview slots; drop scanner noise.
-  const shown = useMemo(() => slots.slice(0, 6), [slots]);
+  // Drop scanner noise past the six team-preview slots before seeding, so the
+  // confirmed ids can only come from what the grid displays.
+  const shown = useMemo(() => slots.slice(0, SCAN_CONFIRM_MAX_SLOTS), [slots]);
   const [entries, setEntries] = useState<ScanEntry[]>(() => seedRoster(shown));
   const setPick = (slotIdx: number, id: number) => setEntries((prev) => updateEntryId(prev, slotIdx, id));
   const ids = opponentIdsFromEntries(entries);

@@ -11,7 +11,7 @@ import { toParsedSets } from './toParsedSets';
 import { formFamilyIds, buildLegalIdsResolver } from './battleRoster';
 import { seedRoster, opponentIdsFromEntries, updateEntryId, type ScanEntry } from './roster';
 import CropStep from './CropStep';
-import ScanConfirmView from './ScanConfirmView';
+import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from './ScanConfirmView';
 
 /**
  * Which screen opened the modal, and what it will do with the result. Two hosts exist:
@@ -124,7 +124,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
   // Import/save build the OPPONENT's roster — player-side entries from battle
   // scans must not leak into it (entries added by hand have no side).
   const rosterNames = () =>
-    roster
+    visibleEntries
       .filter((e) => e.side !== 'player')
       .map((e) => (e.id != null ? byId.get(e.id)?.nameEn : undefined))
       .filter((n): n is string => !!n);
@@ -142,7 +142,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
     calc.onSaveTeam(toParsedSets(names));
   };
 
-  const confirmRosterIds = () => opponentIdsFromEntries(roster);
+  const confirmRosterIds = () => opponentIdsFromEntries(visibleEntries);
 
   const confirmRoster = () => {
     const ids = confirmRosterIds();
@@ -165,11 +165,14 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
   };
 
   // Team scans hide the player's own column — only the opponent's roster is the
-  // user's business here. Battle scans show both sides. (Same rule as before the
-  // Arena confirm-view redesign; the grid itself caps display at 6.)
+  // user's business here. Battle scans show both sides. Capped to the six the
+  // grid displays: confirm/save/import below consume visibleEntries, so an
+  // entry the user cannot see is never silently confirmed.
   const visibleIndexes = roster
     .map((_, i) => i)
-    .filter((i) => !(confirmsRoster && roster[i].side === 'player'));
+    .filter((i) => !(confirmsRoster && roster[i].side === 'player'))
+    .slice(0, SCAN_CONFIRM_MAX_SLOTS);
+  const visibleEntries = visibleIndexes.map((i) => roster[i]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={mode === 'battle' ? 'Scan battle' : 'Scan opponent team'} maxWidth="max-w-4xl">
@@ -280,7 +283,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
               <div className="ml-auto flex items-center gap-2">
                 <Button variant="ghost" onClick={handleClose}>Cancel</Button>
                 {calc && (
-                  <Button variant="secondary" onClick={saveTeam} disabled={roster.every((e) => e.id == null)}>
+                  <Button variant="secondary" onClick={saveTeam} disabled={visibleEntries.every((e) => e.id == null)}>
                     Save opp team to Teams
                   </Button>
                 )}
@@ -290,7 +293,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
                   </Button>
                 )}
                 {imp && (
-                  <Button onClick={confirm} disabled={roster.every((e) => e.id == null)}>
+                  <Button onClick={confirm} disabled={visibleEntries.every((e) => e.id == null)}>
                     Create team
                   </Button>
                 )}
