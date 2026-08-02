@@ -1,7 +1,15 @@
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { normalizeImageBlob } from './imageLoading';
 
 export async function pickImage(): Promise<Blob | null> {
+  const blob = await rawPickImage();
+  // Normalize at pickup so scan, crop previews, and retries all get a
+  // browser-displayable blob (HEIC -> PNG).
+  return blob && (await normalizeImageBlob(blob));
+}
+
+async function rawPickImage(): Promise<Blob | null> {
   if (Capacitor.isNativePlatform()) {
     const photo = await Camera.getPhoto({
       resultType: CameraResultType.Uri,
@@ -21,6 +29,11 @@ export async function pickImage(): Promise<Blob | null> {
 }
 
 export async function takePhoto(): Promise<Blob | null> {
+  const blob = await rawTakePhoto();
+  return blob && (await normalizeImageBlob(blob));
+}
+
+async function rawTakePhoto(): Promise<Blob | null> {
   if (Capacitor.isNativePlatform()) {
     try {
       const photo = await Camera.getPhoto({
