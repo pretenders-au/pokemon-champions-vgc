@@ -16,9 +16,9 @@ describe('Champions dataset sanity', () => {
   })
 
   it('every LEGAL mega has 6 base stats and >=1 ability', () => {
-    // Only megas legal in some format are user-selectable. ~14 Champions Mega rows exist as
-    // data but are legal in no regulation; their incomplete abilities are harmless and out
-    // of scope (see docs/champions-new-abilities.md).
+    // Only megas legal in some Regulation are user-selectable. Some Champions Mega rows exist
+    // as data but are legal in no Regulation; their missing abilities are harmless and out of
+    // scope (see docs/champions-new-abilities.md, which lists them).
     const bad = q(`SELECT p.identifier FROM pokemon_forms f JOIN pokemon p ON p.id=f.pokemon_id
       WHERE f.is_mega=1 AND EXISTS(SELECT 1 FROM format_pokemon fp WHERE fp.pokemon_id=p.id)
         AND (p.base_hp IS NULL OR p.base_speed IS NULL
@@ -36,6 +36,41 @@ describe('Champions dataset sanity', () => {
       LEFT JOIN calculated_speeds cs ON cs.pokemon_id = p.id
       WHERE cs.pokemon_id IS NULL`)
     expect(missing).toEqual([])
+  })
+})
+
+
+describe('Regulation M-C', () => {
+  const legalIds = (name: string) => new Set(q(`SELECT fp.pokemon_id FROM format_pokemon fp
+    JOIN formats f ON f.id = fp.format_id WHERE f.name = '${name}'`).map(([id]) => id as number))
+
+  it('contains all of M-B plus the 35 newly usable rows (Serebii lists 33; Squawkabilly is four plumages)', () => {
+    const mb = legalIds('Regulation M-B')
+    const mc = legalIds('Regulation M-C')
+    expect(mc.size).toBe(mb.size + 35)
+    for (const id of mb) expect(mc.has(id)).toBe(true)
+  })
+
+  it('gives the four form rows the import skipped a dex entry with abilities and moves', () => {
+    const rows = q(`SELECT p.identifier,
+        (SELECT COUNT(*) FROM pokemon_abilities pa WHERE pa.pokemon_id = p.id),
+        (SELECT COUNT(*) FROM pokemon_moves pm WHERE pm.pokemon_id = p.id)
+      FROM pokemon p WHERE p.identifier IN ('toxtricity-low-key', 'squawkabilly-blue-plumage',
+        'squawkabilly-yellow-plumage', 'squawkabilly-white-plumage') ORDER BY p.identifier`)
+    expect(rows.map(([id]) => id)).toEqual([
+      'squawkabilly-blue-plumage', 'squawkabilly-white-plumage', 'squawkabilly-yellow-plumage', 'toxtricity-low-key',
+    ])
+    for (const [, abilities, moves] of rows) {
+      expect(abilities).toBeGreaterThan(0)
+      expect(moves).toBeGreaterThan(0)
+    }
+  })
+
+  it('gives Mega Lucario Z Aura Guard, the one Champions ability new in M-C', () => {
+    const names = q(`SELECT a.name_en FROM pokemon_abilities pa
+      JOIN abilities a ON a.id = pa.ability_id JOIN pokemon p ON p.id = pa.pokemon_id
+      WHERE p.identifier = 'lucario-mega-z'`).map(([n]) => n)
+    expect(names).toEqual(['Aura Guard'])
   })
 })
 

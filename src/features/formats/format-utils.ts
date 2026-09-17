@@ -1,7 +1,7 @@
 export const STORAGE_KEY = 'champions.format'
 
 /** Latest known regulation; the safe default when nothing else is resolvable. */
-export const DEFAULT_FORMAT = 'Regulation M-B'
+export const DEFAULT_FORMAT = 'Regulation M-C'
 
 /**
  * Resolve the initial regulation format from a persisted choice and the list
@@ -9,7 +9,7 @@ export const DEFAULT_FORMAT = 'Regulation M-B'
  *
  * - Use the stored value when it is still available.
  * - Otherwise use the latest available format (regulation names sort lexically,
- *   so `Regulation M-B` > `Regulation M-A`).
+ *   so `Regulation M-C` > `Regulation M-B`).
  * - With no available formats, fall back to the stored value or the default.
  */
 export function resolveInitialFormat(

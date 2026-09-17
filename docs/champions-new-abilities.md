@@ -54,6 +54,8 @@ Serebii/Bulbapedia — see Sources) and what the vendored engine does with it.
 
 ## Note on ability-less Mega rows
 
-~14 other Champions Mega rows (e.g. the Mega-Z forms, Tatsugiri Megas, Mega Heatran/Darkrai)
-exist as data with stats but **no ability and no legality in any regulation** — they are not
-selectable, so their incomplete data is harmless. Left as-is intentionally.
+Nine other Champions Mega rows (Mega Zygarde / Heatran / Darkrai / Magearna / Zeraora and the
+three Tatsugiri Megas) exist as data with stats but **no ability and no legality in any
+regulation** — they are not selectable, so their incomplete data is harmless. Left as-is
+intentionally; when a regulation makes one legal, give it its ability the way
+`scripts/load_regulation_m_c.py` does for the M-C Megas (the dataset sanity test enforces it).
