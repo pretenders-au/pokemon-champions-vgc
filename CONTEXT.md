@@ -3,6 +3,29 @@
 The shared vocabulary for this project. Capability-level specs live in `openspec/specs/`;
 this file names the concepts those specs talk about, so code and conversation use the same words.
 
+## Regulation
+
+### Regulation
+
+The ranked-battle ruleset the whole app is scoped to, named the way the game names it:
+**Regulation M-C**. A Regulation runs for a few months and spans several ranked **seasons**,
+which the app does not model.
+
+A Pokémon is **legal** in a Regulation or it is not. Every list of Pokémon the app offers — the
+species pickers, the team editor, speed tiers, and what a **Scan** is allowed to recognise — is
+the legal set of the selected Regulation, and nothing else.
+
+The code and the database call a Regulation a **format** (`FormatContext`, `formats`,
+`format_pokemon`). They are the same thing; there is no other kind of format.
+
+Legality lists fully evolved Pokémon. A pre-evolution is legal only when named on its own
+(Pikachu is, Meowth is not). Regulations so far have only added: each roster has contained
+its predecessor's. Serebii publishes a Regulation as its **newly usable** delta, not a full
+roster, and that delta is what the data pipeline consumes.
+
+Not to be confused with the **Regular Roster**, Serebii's name for the Recruit Ranch rental
+roster of the same period. It says nothing about legality.
+
 ## Build
 
 ### Set resolution
