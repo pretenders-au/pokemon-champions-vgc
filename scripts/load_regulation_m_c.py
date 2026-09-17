@@ -33,10 +33,9 @@ FORM_ROWS = [
     (10262, "squawkabilly-white-plumage", "White Plumage", 931),
 ]
 
-# identifier -> (name_en, name_ja, name_zh, name_zh_hans)
-NEW_ABILITIES = {
-    "aura-guard": ("Aura Guard", "はどうのぼうご", "波導防護", "波导防护"),
-}
+# The one ability new to the game in M-C: identifier, name_en, name_ja, name_zh, name_zh_hans
+# (names from Bulbapedia's "In other languages" table).
+AURA_GUARD = ("aura-guard", "Aura Guard", "はどうのぼうご", "波導防護", "波导防护")
 
 # pokemon identifier -> Champions ability
 MEGA_ABILITIES = {
@@ -122,13 +121,13 @@ def ability_id(cur, name):
 
 
 def add_mega_abilities(cur):
-    for ident, (en, ja, zh, zh_hans) in NEW_ABILITIES.items():
-        if not cur.execute("SELECT 1 FROM abilities WHERE identifier = ?", (ident,)).fetchone():
-            new_id = cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM abilities").fetchone()[0]
-            cur.execute(
-                "INSERT INTO abilities (id, identifier, name_en, name_ja, name_zh, name_zh_hans)"
-                " VALUES (?,?,?,?,?,?)", (new_id, ident, en, ja, zh, zh_hans))
-            print(f"  + ability {en} (id {new_id})")
+    ident, en, ja, zh, zh_hans = AURA_GUARD
+    if not cur.execute("SELECT 1 FROM abilities WHERE identifier = ?", (ident,)).fetchone():
+        new_id = cur.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM abilities").fetchone()[0]
+        cur.execute(
+            "INSERT INTO abilities (id, identifier, name_en, name_ja, name_zh, name_zh_hans)"
+            " VALUES (?,?,?,?,?,?)", (new_id, ident, en, ja, zh, zh_hans))
+        print(f"  + ability {en} (id {new_id})")
     for ident, ability in MEGA_ABILITIES.items():
         cur.execute(
             "INSERT OR IGNORE INTO pokemon_abilities (pokemon_id, ability_id, is_hidden, slot)"
@@ -166,9 +165,12 @@ def add_legality(cur):
 def main():
     conn = sqlite3.connect(DB)
     cur = conn.cursor()
-    print("form rows"); add_form_rows(cur)
-    print("mega abilities"); add_mega_abilities(cur)
-    print("legality"); add_legality(cur)
+    print("form rows")
+    add_form_rows(cur)
+    print("mega abilities")
+    add_mega_abilities(cur)
+    print("legality")
+    add_legality(cur)
     conn.commit()
 
     print("\nformats:")

@@ -16,9 +16,9 @@ describe('Champions dataset sanity', () => {
   })
 
   it('every LEGAL mega has 6 base stats and >=1 ability', () => {
-    // Only megas legal in some format are user-selectable. ~14 Champions Mega rows exist as
-    // data but are legal in no regulation; their incomplete abilities are harmless and out
-    // of scope (see docs/champions-new-abilities.md).
+    // Only megas legal in some Regulation are user-selectable. Some Champions Mega rows exist
+    // as data but are legal in no Regulation; their missing abilities are harmless and out of
+    // scope (see docs/champions-new-abilities.md, which lists them).
     const bad = q(`SELECT p.identifier FROM pokemon_forms f JOIN pokemon p ON p.id=f.pokemon_id
       WHERE f.is_mega=1 AND EXISTS(SELECT 1 FROM format_pokemon fp WHERE fp.pokemon_id=p.id)
         AND (p.base_hp IS NULL OR p.base_speed IS NULL

@@ -8,7 +8,7 @@ The system SHALL provide a mechanism to fetch Pokémon speed data directly from 
 - **THEN** the system SHALL return a flat list of Pokémon containing `id`, `name`, `baseSpeed`, `maxPlus`, `maxNeutral`, `uninvested`, and `minMinus`.
 
 ### Requirement: Filter by the selected Regulation
-The data fetching logic MUST strictly filter Pokémon based on their legality in the selected Regulation (a `formats` row; the latest, "Regulation M-C", by default).
+The data fetching logic MUST strictly filter Pokémon based on their legality in the selected Regulation (a `formats` row; `DEFAULT_FORMAT` names the fallback).
 
 #### Scenario: Format filtering
 - **WHEN** querying for speed tiers
