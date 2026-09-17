@@ -44,8 +44,8 @@ export function useDamageScenarios(
       const atkMon = mapToSmogonPokemon(attacker, formName(atkBase, attacker), atkBase.type1, atkBase.type2);
       const idx = attacker.activeMoveIndex;
       const customBp = getMovePowerModifier(moveData.nameEn, { faintedCount: attacker.faintedCount });
-      const baseMove = mapToSmogonMove(moveData.nameEn, attacker.movesForceCrit[idx], attacker.movesHits[idx], customBp, attacker.activeAbility);
-      const critMove = mapToSmogonMove(moveData.nameEn, true, attacker.movesHits[idx], customBp, attacker.activeAbility);
+      const baseMove = mapToSmogonMove(moveData.nameEn, attacker.movesForceCrit[idx], attacker.movesHits[idx], customBp);
+      const critMove = mapToSmogonMove(moveData.nameEn, true, attacker.movesHits[idx], customBp);
 
       const run = (defSide: SideState, move = baseMove): ScenarioRange | null => {
         const defMon = mapToSmogonPokemon(defSide, formName(defBase, defSide), defBase.type1, defBase.type2);

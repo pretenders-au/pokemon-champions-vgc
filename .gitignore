@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Vendored @smogon/calc build (see vendor/smogon-calc/README.md)
+!vendor/smogon-calc/dist/
 *.local
 
 # Editor directories and files

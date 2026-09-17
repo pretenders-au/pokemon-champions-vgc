@@ -50,7 +50,7 @@ export function useDamageCalc(
       const isCrit = attacker.movesForceCrit[moveIdx];
       const hits = attacker.movesHits[moveIdx];
       const customBp = getMovePowerModifier(moveData.nameEn, { faintedCount: attacker.faintedCount });
-      const move = mapToSmogonMove(moveData.nameEn, isCrit, hits, customBp, attacker.activeAbility);
+      const move = mapToSmogonMove(moveData.nameEn, isCrit, hits, customBp);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
       const damageArr = Array.isArray(result.damage) ? result.damage : [result.damage || 0];

@@ -1,3 +1,6 @@
+// @smogon/calc is a vendored build of smogon/damage-calc master (vendor/smogon-calc). It models
+// the Champions-original Mega abilities natively, so nothing below special-cases them.
+// See docs/champions-new-abilities.md.
 import { calculate, Pokemon, Move, Field, Generations, Result } from '@smogon/calc';
 import { bareNature } from '@/features/pokemon/utils/pokemon-natures';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
@@ -51,8 +54,6 @@ export const getModifiedMoveType = (
       case 'refrigerate': return 'ice';
       case 'aerilate': return 'flying';
       case 'galvanize': return 'electric';
-      // Champions-original -ate ability not modelled by @smogon/calc (Mega Feraligatr).
-      case 'dragonize': return 'dragon';
     }
   }
 
@@ -218,16 +219,9 @@ export const mapToSmogonPokemon = (
   // from interfering with our manual type selection.
   const effectiveName = stateSide.isTypeOverridden ? 'None' : normalizeSmogonName(pokemonName);
 
-  // Champions: Eelevate (Mega Eelektross) = Levitate (Ground immunity) + Beast Boost. @smogon/calc
-  // doesn't know it, so alias to Levitate for the damage-relevant Ground immunity. Beast Boost's
-  // on-KO stat boost is sequential and not part of a single calc. See docs/champions-new-abilities.md.
-  const calcAbility = stateSide.activeAbility
-    ? (stateSide.activeAbility.toLowerCase() === 'eelevate' ? 'Levitate' : stateSide.activeAbility)
-    : undefined;
-
   const p = new Pokemon(gen, effectiveName, {
     level: 50,
-    ability: calcAbility || undefined,
+    ability: stateSide.activeAbility || undefined,
     item: stateSide.item || undefined,
     nature: bareNature(stateSide.nature) as any,
     evs,
@@ -311,62 +305,15 @@ export const mapToSmogonField = (
   });
 };
 
-// Champions-original offensive abilities @smogon/calc doesn't model. Gated to these three so
-// the engine's native -ate handling (pixilate/galvanize/etc.) is never double-applied.
-// Multipliers mirror @smogon/calc's own modifier constants over 4096.
-const CHAMPIONS_OFFENSIVE_ABILITIES = new Set(['dragonize', 'fire mane', 'mega sol']);
-
-export const getChampionsMoveOverride = (
-  ability: string | null,
-  move: Move,
-  customBp?: number
-): { type?: string; basePower?: number } => {
-  if (!ability) return {};
-  const name = ability.toLowerCase();
-  if (!CHAMPIONS_OFFENSIVE_ABILITIES.has(name)) return {};
-
-  const moveType = move.type.toLowerCase();
-  const bp = customBp ?? move.bp;
-  const out: { type?: string; basePower?: number } = {};
-
-  // Dragonize: -ate type-changer (Normal -> Dragon, ~1.2x power).
-  const retyped = getModifiedMoveType(move.type, move.name, ability);
-  if (retyped.toLowerCase() !== moveType) {
-    out.type = retyped.charAt(0).toUpperCase() + retyped.slice(1);
-  }
-  if (name === 'dragonize' && moveType === 'normal') {
-    out.basePower = Math.round((bp * 4915) / 4096); // ~1.2x
-  } else if (name === 'fire mane' && moveType === 'fire') {
-    out.basePower = Math.round((bp * 6144) / 4096); // 1.5x, always on
-  } else if (name === 'mega sol') {
-    // Personal harsh sunlight: Fire +50%, Water -50%. (Weather Ball is not modelled — see
-    // docs/champions-new-abilities.md — because @smogon/calc force-derives it from field weather.)
-    if (moveType === 'fire') out.basePower = Math.round((bp * 6144) / 4096);
-    else if (moveType === 'water') out.basePower = Math.round((bp * 2048) / 4096);
-  }
-
-  return out;
-};
-
 export const mapToSmogonMove = (
   moveName: string,
   isCrit: boolean = false,
   hits?: number,
-  customBp?: number,
-  ability?: string | null
+  customBp?: number
 ): Move => {
   const gen = Generations.get(9);
   const options: any = { isCrit, hits };
-  const overrides: any = {};
-  if (customBp !== undefined) overrides.basePower = customBp;
-
-  // Apply Champions-original ability effects @smogon/calc doesn't know (retype / power).
-  const base = new Move(gen, moveName);
-  const champ = getChampionsMoveOverride(ability ?? null, base, customBp);
-  if (champ.type !== undefined) overrides.type = champ.type;
-  if (champ.basePower !== undefined) overrides.basePower = champ.basePower;
-
-  if (Object.keys(overrides).length > 0) options.overrides = overrides;
+  if (customBp !== undefined) options.overrides = { basePower: customBp };
   return new Move(gen, moveName, options);
 };
 

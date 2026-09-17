@@ -69,7 +69,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/manrope": "^5.2.8",
     "@fontsource/space-grotesk": "^5.2.10",
-    "@smogon/calc": "^0.11.0",
+    "@smogon/calc": "file:vendor/smogon-calc",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "better-sqlite3": "^12.9.0",
