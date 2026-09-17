@@ -39,6 +39,41 @@ describe('Champions dataset sanity', () => {
   })
 })
 
+
+describe('Regulation M-C', () => {
+  const legalIds = (name: string) => new Set(q(`SELECT fp.pokemon_id FROM format_pokemon fp
+    JOIN formats f ON f.id = fp.format_id WHERE f.name = '${name}'`).map(([id]) => id as number))
+
+  it('contains all of M-B plus the 35 newly usable rows (Serebii lists 33; Squawkabilly is four plumages)', () => {
+    const mb = legalIds('Regulation M-B')
+    const mc = legalIds('Regulation M-C')
+    expect(mc.size).toBe(mb.size + 35)
+    for (const id of mb) expect(mc.has(id)).toBe(true)
+  })
+
+  it('gives the four form rows the import skipped a dex entry with abilities and moves', () => {
+    const rows = q(`SELECT p.identifier,
+        (SELECT COUNT(*) FROM pokemon_abilities pa WHERE pa.pokemon_id = p.id),
+        (SELECT COUNT(*) FROM pokemon_moves pm WHERE pm.pokemon_id = p.id)
+      FROM pokemon p WHERE p.identifier IN ('toxtricity-low-key', 'squawkabilly-blue-plumage',
+        'squawkabilly-yellow-plumage', 'squawkabilly-white-plumage') ORDER BY p.identifier`)
+    expect(rows.map(([id]) => id)).toEqual([
+      'squawkabilly-blue-plumage', 'squawkabilly-white-plumage', 'squawkabilly-yellow-plumage', 'toxtricity-low-key',
+    ])
+    for (const [, abilities, moves] of rows) {
+      expect(abilities).toBeGreaterThan(0)
+      expect(moves).toBeGreaterThan(0)
+    }
+  })
+
+  it('gives Mega Lucario Z Aura Guard, the one Champions ability new in M-C', () => {
+    const names = q(`SELECT a.name_en FROM pokemon_abilities pa
+      JOIN abilities a ON a.id = pa.ability_id JOIN pokemon p ON p.id = pa.pokemon_id
+      WHERE p.identifier = 'lucario-mega-z'`).map(([n]) => n)
+    expect(names).toEqual(['Aura Guard'])
+  })
+})
+
 // Mega Raichu Y is a Champions-original Mega @smogon/calc has NO species data for, so these
 // tests prove the dataset's Mega stats flow through the Spec-1 base-stat override path.
 // (External ChampDex %-parity is a manual cross-check, as in Spec 1; engine↔ChampDex parity

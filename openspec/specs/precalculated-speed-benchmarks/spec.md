@@ -1,10 +1,10 @@
 ## ADDED Requirements
 
-### Requirement: Pre-calculate Regulation M-A speed benchmarks
-The system SHALL pre-calculate and store four speed benchmarks (`maxPlus`, `maxNeutral`, `uninvested`, `minMinus`) for each Pokémon legal in the "Regulation M-A" format.
+### Requirement: Pre-calculate speed benchmarks for every format-legal Pokémon
+The system SHALL pre-calculate and store four speed benchmarks (`maxPlus`, `maxNeutral`, `uninvested`, `minMinus`) for each Pokémon legal in any Regulation.
 
-#### Scenario: Pre-calculation for a Regulation M-A Pokémon
-- **WHEN** a Pokémon is legal in the "Regulation M-A" format
+#### Scenario: Pre-calculation for a format-legal Pokémon
+- **WHEN** a Pokémon is legal in at least one format
 - **THEN** the system SHALL compute its four benchmarks based on its `baseSpeed` and store them in the `calculated_speeds` table.
 
 ### Requirement: Idempotent speed benchmark updates
