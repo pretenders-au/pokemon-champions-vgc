@@ -25,49 +25,6 @@ export const calculateStat = (
   return Math.floor(withStage * abilityMultiplier);
 };
 
-export const getModifiedMoveType = (
-  originalType: string,
-  moveName: string,
-  ability: string | null,
-  weather: string = 'None'
-): string => {
-  const mName = moveName.toLowerCase();
-  
-  // Weather Ball logic: Weather based type changes
-  if (mName === 'weather ball') {
-    switch (weather) {
-      case 'Sun': return 'fire';
-      case 'Rain': return 'water';
-      case 'Sandstorm': return 'rock';
-      case 'Snow': return 'ice';
-    }
-  }
-
-  if (!ability) return originalType;
-  const name = ability.toLowerCase();
-  const type = originalType.toLowerCase();
-
-  // -ate abilities: Only change Normal-type moves
-  if (type === 'normal') {
-    switch (name) {
-      case 'pixilate': return 'fairy';
-      case 'refrigerate': return 'ice';
-      case 'aerilate': return 'flying';
-      case 'galvanize': return 'electric';
-    }
-  }
-
-  // Liquid Voice: Changes sound-based moves to Water
-  if (name === 'liquid voice') {
-    const soundMoves = ['hyper voice', 'snarl', 'boomburst', 'bug buzz', 'sparkling aria', 'overdrive', 'clanging scales', 'disarming voice', 'echoed voice', 'howl', 'noble roar', 'parting shot', 'perish song', 'relic song', 'roar', 'sing', 'uproar'];
-    if (soundMoves.includes(moveName.toLowerCase())) {
-      return 'water';
-    }
-  }
-
-  return originalType;
-};
-
 export const getStatModifier = (
   ability: string | null,
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe',

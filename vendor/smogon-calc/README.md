@@ -22,5 +22,5 @@ npm install
 npm test
 ```
 
-Source maps and the browser bundle are not vendored. When an npm release ≥ 0.12 ships
+Source maps, the browser bundle and upstream's compiled tests are not vendored. When an npm release ≥ 0.12 ships
 `mechanics/champions`, delete this folder, restore the registry dependency and rerun the tests.

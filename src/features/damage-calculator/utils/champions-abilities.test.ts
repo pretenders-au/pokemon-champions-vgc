@@ -37,14 +37,15 @@ const minDamage = (a: any, d: any, m: any): number => {
   return Array.isArray(r) ? (r[0] as number) : (r as number)
 }
 
-/** min-roll damage with the ability divided by min-roll damage without it. */
-const attackerRatio = (ability: string, attackerType: string, defender: any, moveName: string) =>
-  minDamage(mon(ability, 'A', attackerType), defender, mapToSmogonMove(moveName)) /
-  minDamage(mon(null, 'A', attackerType), defender, mapToSmogonMove(moveName))
-
-const defenderRatio = (ability: string, defenderType: string, attacker: any, moveName: string) =>
-  minDamage(attacker, mon(ability, 'D', defenderType), mapToSmogonMove(moveName)) /
-  minDamage(attacker, mon(null, 'D', defenderType), mapToSmogonMove(moveName))
+/** Min-roll damage with `ability` on one side of the matchup, divided by the same matchup without it. */
+const abilityRatio = (side: 'attacker' | 'defender', ability: string, type: string, other: any, moveName: string) => {
+  const move = mapToSmogonMove(moveName)
+  const withIt = mon(ability, 'X', type)
+  const without = mon(null, 'X', type)
+  return side === 'attacker'
+    ? minDamage(withIt, other, move) / minDamage(without, other, move)
+    : minDamage(other, withIt, move) / minDamage(other, without, move)
+}
 
 describe('Dragonize (Mega Feraligatr): Normal -> Dragon, ~1.2x', () => {
   it('lets a Normal move hit a Ghost (Normal is immune; Dragon is not)', () => {
@@ -57,7 +58,7 @@ describe('Dragonize (Mega Feraligatr): Normal -> Dragon, ~1.2x', () => {
   it('applies a ~1.2x boost (isolated from STAB/effectiveness) and names itself in the desc', () => {
     // Attacker is Water (no Normal or Dragon STAB); defender Electric (Normal & Dragon both 1x).
     const electric = mon(null, 'D', 'electric')
-    const ratio = attackerRatio('Dragonize', 'water', electric, 'Body Slam')
+    const ratio = abilityRatio('attacker', 'Dragonize', 'water', electric, 'Body Slam')
     expect(ratio).toBeGreaterThan(1.12)
     expect(ratio).toBeLessThan(1.28)
     expect(calculateSmogonDamage(mon('Dragonize', 'A', 'water'), electric, mapToSmogonMove('Body Slam'), field).desc())
@@ -69,13 +70,13 @@ describe('Fire Mane (Mega Pyroar): Fire moves x1.5, always on', () => {
   const normal = mon(null, 'D', 'normal') // Fire vs Normal = 1x
 
   it('increases Fire-move damage ~1.5x (isolated from STAB/effectiveness)', () => {
-    const ratio = attackerRatio('Fire Mane', 'normal', normal, 'Flamethrower')
+    const ratio = abilityRatio('attacker', 'Fire Mane', 'normal', normal, 'Flamethrower')
     expect(ratio).toBeGreaterThan(1.42)
     expect(ratio).toBeLessThan(1.58)
   })
 
   it('does not touch non-Fire moves', () => {
-    expect(attackerRatio('Fire Mane', 'normal', normal, 'Thunderbolt')).toBe(1)
+    expect(abilityRatio('attacker', 'Fire Mane', 'normal', normal, 'Thunderbolt')).toBe(1)
   })
 })
 
@@ -83,10 +84,10 @@ describe('Mega Sol (Mega Meganium): personal harsh sunlight', () => {
   const normal = mon(null, 'D', 'normal')
 
   it('boosts Fire moves ~x1.5 and halves Water moves', () => {
-    const fire = attackerRatio('Mega Sol', 'grass', normal, 'Flamethrower')
+    const fire = abilityRatio('attacker', 'Mega Sol', 'grass', normal, 'Flamethrower')
     expect(fire).toBeGreaterThan(1.42)
     expect(fire).toBeLessThan(1.58)
-    const water = attackerRatio('Mega Sol', 'grass', normal, 'Surf')
+    const water = abilityRatio('attacker', 'Mega Sol', 'grass', normal, 'Surf')
     expect(water).toBeGreaterThan(0.45)
     expect(water).toBeLessThan(0.55)
   })
@@ -97,7 +98,7 @@ describe('Mega Sol (Mega Meganium): personal harsh sunlight', () => {
   })
 
   it('does not touch non-Fire/Water moves', () => {
-    expect(attackerRatio('Mega Sol', 'grass', normal, 'Earthquake')).toBe(1)
+    expect(abilityRatio('attacker', 'Mega Sol', 'grass', normal, 'Earthquake')).toBe(1)
   })
 })
 
@@ -110,7 +111,7 @@ describe('Eelevate (Mega Eelektross): Levitate (Ground immunity) + Beast Boost',
   })
 
   it('does not change damage from non-Ground moves', () => {
-    expect(defenderRatio('Eelevate', 'electric', mon(null, 'A', 'water'), 'Surf')).toBe(1)
+    expect(abilityRatio('defender', 'Eelevate', 'electric', mon(null, 'A', 'water'), 'Surf')).toBe(1)
   })
 })
 
@@ -118,22 +119,22 @@ describe('Aura Guard (Mega Lucario Z): halves damage from contact moves', () => 
   const attacker = mon(null, 'A', 'normal')
 
   it('halves a contact move', () => {
-    const ratio = defenderRatio('Aura Guard', 'normal', attacker, 'Body Slam')
+    const ratio = abilityRatio('defender', 'Aura Guard', 'normal', attacker, 'Body Slam')
     expect(ratio).toBeGreaterThan(0.45)
     expect(ratio).toBeLessThan(0.55)
   })
 
   it('does not touch a non-contact move', () => {
-    expect(defenderRatio('Aura Guard', 'normal', attacker, 'Hyper Voice')).toBe(1)
+    expect(abilityRatio('defender', 'Aura Guard', 'normal', attacker, 'Hyper Voice')).toBe(1)
   })
 })
 
 describe('Utility abilities with no damage-calc impact', () => {
   it('Piercing Drill does not change a contact move (the calc has no Protect state)', () => {
-    expect(attackerRatio('Piercing Drill', 'ground', mon(null, 'D', 'normal'), 'Close Combat')).toBe(1)
+    expect(abilityRatio('attacker', 'Piercing Drill', 'ground', mon(null, 'D', 'normal'), 'Close Combat')).toBe(1)
   })
 
   it('Spicy Spray does not change incoming damage (burn is applied after the hit)', () => {
-    expect(defenderRatio('Spicy Spray', 'grass', mon(null, 'A', 'normal'), 'Body Slam')).toBe(1)
+    expect(abilityRatio('defender', 'Spicy Spray', 'grass', mon(null, 'A', 'normal'), 'Body Slam')).toBe(1)
   })
 })

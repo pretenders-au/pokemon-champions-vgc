@@ -4,7 +4,8 @@
 # The npm release (0.11.0, March 2026) predates the Pokémon Champions mechanics that master
 # gained in June–September 2026 (Dragonize, Fire Mane, Mega Sol, Eelevate, Aura Guard, the
 # M-C Megas). The package lives in the repo's calc/ subfolder, which npm cannot install from
-# git, so we compile it and commit the output. Source maps and the browser bundle are dropped.
+# git, so we compile it and commit the output. Source maps, the browser bundle and the
+# compiled upstream tests are dropped.
 #
 # Usage: scripts/vendor-smogon-calc.sh <commit-sha>   # then: npm install && npm test
 set -euo pipefail
@@ -21,9 +22,10 @@ git -C "$tmp" checkout -q FETCH_HEAD
 (cd "$tmp/calc" && npm install --ignore-scripts --no-audit --no-fund && npx tsc -p .)
 
 mkdir -p "$dest"
-rsync -a --delete --exclude='*.map' "$tmp/calc/dist/" "$dest/dist/"
+rsync -a --delete --exclude='*.map' --exclude='test/' "$tmp/calc/dist/" "$dest/dist/"
 # Maps are not vendored, so drop the references too (Vite warns on every dangling one).
-find "$dest/dist" -name '*.js' -exec sed -i '' '/^\/\/# sourceMappingURL=/d' {} +
+# perl rather than sed -i: the in-place flag differs between BSD and GNU sed.
+find "$dest/dist" -name '*.js' -exec perl -ni -e 'print unless /^\/\/# sourceMappingURL=/' {} +
 cp "$tmp/calc/LICENSE" "$dest/LICENSE"
 short="$(git -C "$tmp" rev-parse --short=7 HEAD)"
 cat > "$dest/package.json" <<JSON
