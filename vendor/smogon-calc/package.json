@@ -1,7 +1,7 @@
 {
   "name": "@smogon/calc",
-  "version": "0.11.0-champions.111407c",
-  "description": "Pokémon battle calculator — vendored build of smogon/damage-calc@111407c919c2c886688db704ae97376e768b72e4 (see README.md)",
+  "version": "0.11.0-champions.06cc611",
+  "description": "Pokémon battle calculator — vendored build of smogon/damage-calc@06cc6116714a2dd92cc2fdcee3052bcecf8eb714 (see README.md)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "license": "MIT",

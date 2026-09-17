@@ -1,7 +1,7 @@
 // @smogon/calc is a vendored build of smogon/damage-calc master (vendor/smogon-calc). It models
 // the Champions-original Mega abilities natively, so nothing below special-cases them.
 // See docs/champions-new-abilities.md.
-import { calculate, Pokemon, Move, Field, Generations, Result } from '@smogon/calc';
+import { calculate, Pokemon, Move, Field, Generations, Result, toID } from '@smogon/calc';
 import { bareNature } from '@/features/pokemon/utils/pokemon-natures';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
 
@@ -262,6 +262,21 @@ export const mapToSmogonField = (
   });
 };
 
+// Pokémon Champions rebalances some moves — First Impression is 100 BP, Slash 80, Snap Trap is
+// Steel, … — and upstream records that in its Champions generation (gen 0). The engine runs the
+// gen 9 mechanics, so borrow the Champions base power and type wherever they differ from gen 9.
+// scripts/sync-champions-move-data.ts copies the same values into the dex so the picker agrees.
+export const championsMoveOverrides = (moveName: string): { basePower?: number; type?: string } => {
+  const id = toID(moveName);
+  const champ = Generations.get(0).moves.get(id);
+  const main = Generations.get(9).moves.get(id);
+  if (!champ || !main) return {};
+  const out: { basePower?: number; type?: string } = {};
+  if (champ.basePower !== undefined && champ.basePower !== main.basePower) out.basePower = champ.basePower;
+  if (champ.type && champ.type !== main.type) out.type = champ.type;
+  return out;
+};
+
 export const mapToSmogonMove = (
   moveName: string,
   isCrit: boolean = false,
@@ -269,8 +284,10 @@ export const mapToSmogonMove = (
   customBp?: number
 ): Move => {
   const gen = Generations.get(9);
+  const overrides: { basePower?: number; type?: string } = championsMoveOverrides(moveName);
+  if (customBp !== undefined) overrides.basePower = customBp; // an explicit BP (Last Respects, …) wins
   const options: any = { isCrit, hits };
-  if (customBp !== undefined) options.overrides = { basePower: customBp };
+  if (Object.keys(overrides).length > 0) options.overrides = overrides;
   return new Move(gen, moveName, options);
 };
 

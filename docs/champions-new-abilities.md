@@ -40,6 +40,18 @@ Serebii/Bulbapedia — see Sources) and what the vendored engine does with it.
   `mechanics/champions` — cannot silently drop one.
 - Refresh with `scripts/vendor-smogon-calc.sh <commit>`; see `vendor/smogon-calc/README.md`.
 
+## Champions move rebalances
+
+Pokémon Champions also changes some moves' numbers: First Impression 90→100 BP, Slash 70→80,
+Meteor Assault 150→170, Trop Kick 70→85, Snap Trap Grass→Steel, and about twenty more. Upstream
+records these only in its Champions generation (`Generations.get(0)`), and the app runs the gen 9
+mechanics, so `championsMoveOverrides` in `damage-calc.ts` borrows the Champions base power and
+type wherever they differ from gen 9 and `mapToSmogonMove` applies them (an explicit custom BP,
+e.g. Last Respects, still wins). `scripts/sync-champions-move-data.ts` copies the same values
+into the dex's `moves` table so the move picker shows what the engine uses;
+`champions-move-rebalance.test.ts` asserts the two agree. Both follow the vendored build, so a
+refresh picks up new rebalances without a code change.
+
 ## Sources
 
 - Dragonize / Mega Sol reveal — Serebii: https://x.com/SerebiiNet/status/2036444426906579390
