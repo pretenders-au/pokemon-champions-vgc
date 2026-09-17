@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => ({
   // so ORT is served as native ESM and fetches /ort/* assets directly.
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
+    // @smogon/calc is a linked `file:` package (vendor/smogon-calc) compiled to CommonJS.
+    // Vite skips pre-bundling linked packages, which would serve the CJS raw and break the
+    // named ESM imports in dev; forcing it through the optimizer converts it.
+    include: ['@smogon/calc'],
   },
   resolve: {
     alias: {
