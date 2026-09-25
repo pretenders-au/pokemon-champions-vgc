@@ -4,9 +4,10 @@ Seven **Champions-original** Mega abilities exist that `@smogon/calc` 0.11.0 doe
 Because `@smogon/calc` **silently ignores** an unknown ability (it does not crash), a Mega with one
 of these would compute damage *as if it had no ability*.
 
-`@smogon/calc` 0.12.0 (2026-09-18) models all of them natively (smogon/damage-calc master gained
-the M-B six in June 2026 and Aura Guard on 2026-09-08), so the app depends on `^0.12.0` and
-`damage-calc.ts` special-cases nothing. Until that release the app ran a vendored build of master.
+Since 0.12.0 (2026-09-18), `@smogon/calc` knows all seven, and the table below shows how far it
+models each (smogon/damage-calc master gained the M-B six in June 2026 and Aura Guard on 2026-09-08).
+The app depends on `^0.12.0` and `damage-calc.ts` special-cases nothing. Until that release the app
+ran a vendored build of master.
 
 This file records each ability's **confirmed** in-game effect (cross-checked against
 Serebii/Bulbapedia — see Sources) and what the engine does with it.
@@ -18,7 +19,7 @@ Serebii/Bulbapedia — see Sources) and what the engine does with it.
 
 ## Confirmed effects and handling
 
-| Ability | Mega | Confirmed effect | In `@smogon/calc` 0.12.0 |
+| Ability | Mega | Confirmed effect | In `@smogon/calc` |
 |---|---|---|---|
 | **Dragonize** | Mega Feraligatr | `-ate` type-changer: Normal-type moves become **Dragon**-type, power ×1.2. | Modelled: Normal moves become Dragon at ~1.2× (`4915/4096`), and the desc names the ability. |
 | **Eelevate** | Mega Eelektross | Levitate (immune to Ground moves except Thousand Arrows; ignores Spikes/Toxic Spikes/Sticky Web) **+** Beast Boost (highest non-HP stat +1 on KO). | Partly modelled: listed alongside Levitate for Ground immunity. Beast Boost (on-KO stat boost) is sequential, not part of a single damage calc — not modelled. |
