@@ -6,10 +6,9 @@ import {
   calculateSmogonDamage,
 } from '@/features/damage-calculator/utils/damage-calc'
 
-// Champions-original Mega abilities. The released @smogon/calc (0.11.0) does not know them;
-// the vendored build of smogon/damage-calc master (vendor/smogon-calc) models them natively and
-// the engine passes the ability name straight through. These tests pin that a refresh of the
-// vendored build — or a return to the npm package — cannot silently drop one.
+// Champions-original Mega abilities. @smogon/calc 0.11.0 did not know them; 0.12.0 models them
+// natively and the engine passes the ability name straight through. These tests pin that an
+// @smogon/calc upgrade cannot silently drop one.
 // See docs/champions-new-abilities.md for confirmed effects + sources.
 
 const stateFor = (o: Record<string, unknown> = {}) => ({

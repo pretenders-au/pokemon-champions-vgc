@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { Generations, toID } from '@smogon/calc'
 import { mapToSmogonMove } from '@/features/damage-calculator/utils/damage-calc'
 
-// Pokémon Champions rebalances some moves. The vendored @smogon/calc keeps those numbers in its
+// Pokémon Champions rebalances some moves. @smogon/calc keeps those numbers in its
 // Champions generation (gen 0); the engine runs gen 9 mechanics and borrows them per move.
 // See docs/champions-new-abilities.md, "Champions move rebalances".
 

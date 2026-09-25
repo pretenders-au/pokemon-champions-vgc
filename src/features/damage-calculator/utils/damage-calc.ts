@@ -1,6 +1,5 @@
-// @smogon/calc is a vendored build of smogon/damage-calc master (vendor/smogon-calc). It models
-// the Champions-original Mega abilities natively, so nothing below special-cases them.
-// See docs/champions-new-abilities.md.
+// @smogon/calc (0.12.0+) models the Champions-original Mega abilities natively, so nothing below
+// special-cases them. See docs/champions-new-abilities.md.
 import { calculate, Pokemon, Move, Field, Generations, Result, toID } from '@smogon/calc';
 import { bareNature } from '@/features/pokemon/utils/pokemon-natures';
 import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';

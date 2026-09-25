@@ -2,12 +2,12 @@
  * Copy Pokémon Champions' move rebalances into vgc_pokemon.db's `moves` table, so the move
  * picker shows the same base power and type the damage engine uses.
  *
- * Source of truth is the vendored @smogon/calc's Champions generation (gen 0) compared against
+ * Source of truth is @smogon/calc's Champions generation (gen 0) compared against
  * gen 9: every move whose base power or type differs is updated (First Impression 90→100,
  * Snap Trap Grass→Steel, …). `championsMoveOverrides` in damage-calc.ts reads the same table at
  * calc time, and champions-move-rebalance.test.ts asserts the dex agrees with it.
  *
- * Re-run after refreshing the vendored build (scripts/vendor-smogon-calc.sh):
+ * Re-run after upgrading @smogon/calc:
  *   npx tsx scripts/sync-champions-move-data.ts && cp vgc_pokemon.db public/vgc_pokemon.db
  */
 import Database from 'better-sqlite3';

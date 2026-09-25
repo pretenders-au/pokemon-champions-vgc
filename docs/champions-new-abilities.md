@@ -1,15 +1,16 @@
 # Champions Mega abilities vs `@smogon/calc`
 
-Seven **Champions-original** Mega abilities exist that the released `@smogon/calc` (0.11.0, the
-newest on npm) does not know. Because `@smogon/calc` **silently ignores** an unknown ability (it
-does not crash), a Mega with one of these would compute damage *as if it had no ability*.
+Seven **Champions-original** Mega abilities exist that `@smogon/calc` 0.11.0 does not know.
+Because `@smogon/calc` **silently ignores** an unknown ability (it does not crash), a Mega with one
+of these would compute damage *as if it had no ability*.
 
-smogon/damage-calc's master branch models all of them natively (the M-B six since June 2026, Aura
-Guard since 2026-09-08) but no release followed, so the app depends on a **vendored build of
-master** — `vendor/smogon-calc`, pinned in its README — and `damage-calc.ts` special-cases nothing.
+Since 0.12.0 (2026-09-18), `@smogon/calc` knows all seven, and the table below shows how far it
+models each (smogon/damage-calc master gained the M-B six in June 2026 and Aura Guard on 2026-09-08).
+The app depends on `^0.12.0` and `damage-calc.ts` special-cases nothing. Until that release the app
+ran a vendored build of master.
 
 This file records each ability's **confirmed** in-game effect (cross-checked against
-Serebii/Bulbapedia — see Sources) and what the vendored engine does with it.
+Serebii/Bulbapedia — see Sources) and what the engine does with it.
 
 > Note: the original draft of this file *guessed* that Eelevate and Fire Mane were `-ate`
 > type-changers like Dragonize. Research disproved that — **only Dragonize is an `-ate`
@@ -18,7 +19,7 @@ Serebii/Bulbapedia — see Sources) and what the vendored engine does with it.
 
 ## Confirmed effects and handling
 
-| Ability | Mega | Confirmed effect | In the vendored `@smogon/calc` |
+| Ability | Mega | Confirmed effect | In `@smogon/calc` |
 |---|---|---|---|
 | **Dragonize** | Mega Feraligatr | `-ate` type-changer: Normal-type moves become **Dragon**-type, power ×1.2. | Modelled: Normal moves become Dragon at ~1.2× (`4915/4096`), and the desc names the ability. |
 | **Eelevate** | Mega Eelektross | Levitate (immune to Ground moves except Thousand Arrows; ignores Spikes/Toxic Spikes/Sticky Web) **+** Beast Boost (highest non-HP stat +1 on KO). | Partly modelled: listed alongside Levitate for Ground immunity. Beast Boost (on-KO stat boost) is sequential, not part of a single damage calc — not modelled. |
@@ -33,12 +34,12 @@ Serebii/Bulbapedia — see Sources) and what the vendored engine does with it.
 - `damage-calc.ts` passes the ability name straight to the engine; there is no Champions
   special-casing left in the app. The earlier hand-rolled overrides (move retype / base-power
   multipliers for Dragonize, Fire Mane and Mega Sol; an Eelevate→Levitate alias) were removed when
-  the vendored build arrived, because the engine now applies the same effects and the two together
-  would have doubled them.
-- `champions-abilities.test.ts` pins every effect above through `calculateSmogonDamage`, so a
-  refresh of the vendored build — or a return to the npm package once a release includes
-  `mechanics/champions` — cannot silently drop one.
-- Refresh with `scripts/vendor-smogon-calc.sh <commit>`; see `vendor/smogon-calc/README.md`.
+  the engine gained native support, because the engine now applies the same effects and the two
+  together would have doubled them.
+- `champions-abilities.test.ts` pins every effect above through `calculateSmogonDamage`, so an
+  `@smogon/calc` upgrade cannot silently drop one.
+- After upgrading `@smogon/calc`, rerun `scripts/sync-champions-move-data.ts` (command in its
+  header) and `npm test`.
 
 ## Champions move rebalances
 
@@ -49,8 +50,8 @@ mechanics, so `championsMoveOverrides` in `damage-calc.ts` borrows the Champions
 type wherever they differ from gen 9 and `mapToSmogonMove` applies them (an explicit custom BP,
 e.g. Last Respects, still wins). `scripts/sync-champions-move-data.ts` copies the same values
 into the dex's `moves` table so the move picker shows what the engine uses;
-`champions-move-rebalance.test.ts` asserts the two agree. Both follow the vendored build, so a
-refresh picks up new rebalances without a code change.
+`champions-move-rebalance.test.ts` asserts the two agree. Both follow `@smogon/calc`, so an
+upgrade picks up new rebalances without a code change.
 
 ## Sources
 
