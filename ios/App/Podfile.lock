@@ -1,11 +1,11 @@
 PODS:
   - Capacitor (8.4.1):
     - CapacitorCordova
-  - CapacitorCamera (8.2.0):
+  - CapacitorCamera (8.2.6):
     - Capacitor
-    - IONCameraLib (~> 1.0.4)
+    - IONCameraLib (~> 2.0.0)
   - CapacitorCordova (8.4.1)
-  - IONCameraLib (1.0.4)
+  - IONCameraLib (2.0.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
@@ -26,9 +26,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: 35242afe195b1e53c58ca1b827d1b444c5e6602b
-  CapacitorCamera: 8f6acf83664118321111e76acef86390211ccb08
+  CapacitorCamera: 09e51f52c079eaf731a5528a1c3455c074ccc24c
   CapacitorCordova: eebe6bcf807b1b06f3f48237650f96bbcd0eef09
-  IONCameraLib: f2349804460bd9e3f892e42109b8d996ab3fa19d
+  IONCameraLib: 729cae576e1a952602ce750a9790b6dc7d7e2e95
 
 PODFILE CHECKSUM: 71f5e43fe3de23dd69cab1482eb562ac08adaa5f
 
