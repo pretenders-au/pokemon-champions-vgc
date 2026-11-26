@@ -4,9 +4,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
 
 vi.mock('./correctionStore', () => ({ MAX_SAMPLES: 200, countSamples: vi.fn(), listSamples: vi.fn(), clearSamples: vi.fn() }));
+vi.mock('./mediaProjectionSource', () => ({ ScreenCapture: { shareFile: vi.fn(async () => {}) } }));
 
 import ScanCorrectionsExport from './ScanCorrectionsExport';
 import { countSamples, listSamples, clearSamples } from './correctionStore';
+import { ScreenCapture } from './mediaProjectionSource';
 
 const samples = [{ key: 'aa', id: 25, predicted: 26, png: 'UE5H' }, { key: 'bb', id: 6, predicted: null, png: 'UE5H' }];
 const readText = (blob: Blob) =>
@@ -21,7 +23,10 @@ beforeEach(() => {
   vi.mocked(listSamples).mockResolvedValue(samples);
   vi.mocked(clearSamples).mockResolvedValue(undefined);
 });
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete (navigator as { share?: unknown }).share;
+});
 
 describe('ScanCorrectionsExport', () => {
   it('shows nothing while there is nothing to export', async () => {
@@ -38,11 +43,30 @@ describe('ScanCorrectionsExport', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('shows nothing in the native shells, where a download has nowhere to go', async () => {
-    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
-    const { container } = render(<ScanCorrectionsExport />);
-    await waitFor(() => expect(countSamples).toHaveBeenCalled());
-    expect(container.textContent).toBe('');
+  it('shares the export through the ScreenCapture plugin on Android, where a download has nowhere to go', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(ScreenCapture.shareFile).toHaveBeenCalled());
+    const [{ name, text }] = vi.mocked(ScreenCapture.shareFile).mock.lastCall!;
+    expect(name).toMatch(/^scan-corrections-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(JSON.parse(text)).toEqual({ version: 1, samples });
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('shares the export as a file through the share sheet on iOS', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const share = vi.fn(async (_data: ShareData) => {});
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const [file] = share.mock.lastCall![0].files!;
+    expect(file.name).toMatch(/^scan-corrections-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(JSON.parse(await readText(file))).toEqual({ version: 1, samples });
+    expect(click).not.toHaveBeenCalled();
   });
 
   it('counts a single sample in the singular', async () => {

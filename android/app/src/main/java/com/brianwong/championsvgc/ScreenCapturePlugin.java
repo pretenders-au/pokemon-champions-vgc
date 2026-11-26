@@ -8,6 +8,7 @@ import android.os.Build;
 import android.provider.Settings;
 
 import androidx.activity.result.ActivityResult;
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -15,6 +16,11 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @CapacitorPlugin(name = "ScreenCapture")
 public class ScreenCapturePlugin extends Plugin {
@@ -88,6 +94,26 @@ public class ScreenCapturePlugin extends Plugin {
         Intent intent = new Intent(getContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         getContext().startActivity(intent);
+        call.resolve();
+    }
+
+    /** Writes {@code text} to a cache file called {@code name} and opens the share sheet for it. */
+    @PluginMethod
+    public void shareFile(PluginCall call) {
+        File file = new File(getContext().getCacheDir(), call.getString("name"));
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            out.write(call.getString("text").getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            call.reject("could not write " + file.getName(), e);
+            return;
+        }
+        Uri uri = FileProvider.getUriForFile(
+                getContext(), getContext().getPackageName() + ".fileprovider", file);
+        Intent send = new Intent(Intent.ACTION_SEND)
+                .setType("application/json")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getActivity().startActivity(Intent.createChooser(send, null));
         call.resolve();
     }
 

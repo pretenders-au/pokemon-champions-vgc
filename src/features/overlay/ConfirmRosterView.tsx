@@ -5,6 +5,7 @@
 import React, { useMemo, useState } from 'react';
 import { seedRoster, updateEntryId, opponentIdsFromEntries, type ScanEntry } from '@/features/scan/roster';
 import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from '@/features/scan/ScanConfirmView';
+import { recordCorrections } from '@/features/scan/corrections';
 import { Icon } from '@/design-system/arena';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
@@ -37,7 +38,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
         </button>
         <button
           disabled={ids.length === 0}
-          onClick={() => onConfirm(ids)}
+          onClick={() => { void recordCorrections(entries); onConfirm(ids); }}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 'var(--r-sm)', border: 'none',
             cursor: ids.length === 0 ? 'default' : 'pointer', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
