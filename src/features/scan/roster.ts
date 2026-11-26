@@ -1,4 +1,4 @@
-import type { Candidate, ScanSide, SlotResult } from '@/features/scan/types';
+import type { Candidate, RgbaImage, ScanSide, SlotResult } from '@/features/scan/types';
 
 /**
  * The editable roster behind every scan-confirm screen — the overlay's bubble popup, the
@@ -11,6 +11,12 @@ export interface ScanEntry {
   /** Which team the slot belongs to. Absent for hand-added rows and team-preview scans. */
   side?: ScanSide;
   hpPercent?: number | null;
+  /**
+   * Where a scanned slot came from: the crop that was classified and the id this roster
+   * was seeded with. Rides on the entry because the hosts filter, cap and remove rows,
+   * so nothing can be looked up by index later. Absent for hand-added rows.
+   */
+  scanned?: { crop: RgbaImage; id: number | null };
 }
 
 /**
@@ -89,6 +95,7 @@ export function seedRoster(slots: SlotResult[]): ScanEntry[] {
     candidates: slot.candidates,
     side: slot.side,
     hpPercent: slot.hpPercent,
+    ...(slot.crop && { scanned: { crop: slot.crop, id: ids[index] } }),
   }));
 }
 

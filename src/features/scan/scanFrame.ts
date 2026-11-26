@@ -86,6 +86,10 @@ export async function scanFrame(
 
   const classifier = await loadClassifierFn();
   const { mode, targets } = detectTargets(image);
+  // Crops are kept (for correction capture) only when the whole opponent column was found:
+  // with a card missed, boxes straddle two cards and slot N is no longer card N, so a
+  // re-pick made by card position would label the wrong pixels.
+  const keepCrops = mode === 'team' && targets.filter((t) => t.side === 'opponent').length === 6;
   const slots: SlotResult[] = [];
   for (const { box, side, hpPercent } of targets) {
     const tile = crop(image, box);
@@ -94,7 +98,7 @@ export async function scanFrame(
     const useDescriptorFallback =
       engine === 'auto' && (!classifier || (classifierCandidates[0]?.score ?? 0) < CLASSIFIER_CONFIDENCE_THRESHOLD);
     const candidates = useDescriptorFallback ? matchTileFn(tile, refsFor(mask), 3) : classifierCandidates;
-    slots.push({ box, side, hpPercent, candidates });
+    slots.push({ box, side, hpPercent, candidates, ...(keepCrops && { crop: tile }) });
   }
   console.log(`[scan] mode: ${mode}, engine: ${classifier ? 'classifier' : 'descriptor'} (${engine})`);
   return { mode, slots };

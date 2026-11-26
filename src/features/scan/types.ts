@@ -10,4 +10,10 @@ export interface Descriptor { dhash: string; rgb16: number[]; sil8: number[]; ed
 export interface ReferenceEntry { id: number; desc: Descriptor }
 export interface Candidate { id: number; score: number }
 export type ScanSide = 'player' | 'opponent';
-export interface SlotResult { box: TileBox; candidates: Candidate[]; side?: ScanSide; hpPercent?: number | null }
+export interface SlotResult {
+  box: TileBox; candidates: Candidate[]; side?: ScanSide; hpPercent?: number | null;
+  /** Team-preview scans that found all six opponent cards only: the pixels that were
+   *  classified, kept so a user's re-pick can be saved as a labelled training sample
+   *  (see corrections.ts). */
+  crop?: RgbaImage;
+}
