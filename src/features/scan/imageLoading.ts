@@ -25,6 +25,27 @@ async function decodeViaImg(blob: Blob): Promise<RgbaImage> {
   }
 }
 
+/**
+ * The image's RGB as a lossless PNG, base64 without the data-URL prefix. Alpha is forced
+ * opaque: a canvas stores premultiplied pixels, so a translucent one would not come back
+ * with the RGB the classifier read, and neither the classifier nor the trainer uses alpha.
+ * The canvas factory is injectable so Node can pass node-canvas (as makeTextRenderer does).
+ */
+export function rgbaToPngBase64(
+  img: RgbaImage,
+  createCanvas: (w: number, h: number) => any =
+    (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
+): string {
+  const canvas = createCanvas(img.width, img.height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas context unavailable');
+  const pixels = ctx.createImageData(img.width, img.height);
+  pixels.data.set(img.data);
+  for (let i = 3; i < pixels.data.length; i += 4) pixels.data[i] = 255;
+  ctx.putImageData(pixels, 0, 0);
+  return canvas.toDataURL('image/png').split(',')[1];
+}
+
 // ISO BMFF brands that mean "HEIF family" — covers iPhone .heic photos.
 const HEIC_BRANDS = ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'];
 

@@ -7,6 +7,8 @@ import PokemonImage from '@/components/atoms/PokemonImage';
 import CropStep from '@/features/scan/CropStep';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from '@/features/scan/ScanConfirmView';
+import ScanCorrectionsExport from '@/features/scan/ScanCorrectionsExport';
+import { recordCorrections } from '@/features/scan/corrections';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { normalizeImageBlob } from '@/features/scan/imageLoading';
@@ -92,6 +94,7 @@ const ScanOpponentPage: React.FC = () => {
     const ids = opponentIdsFromEntries(roster);
     if (ids.length === 0) return;
     saveBattleRoster(ids);
+    void recordCorrections(roster);
     setSaved(true);
   };
 
@@ -169,6 +172,9 @@ const ScanOpponentPage: React.FC = () => {
                   overlay session — the mobile UI's sole path to the toggle. */}
               <div style={{ marginTop: 14 }}>
                 <OneTapCaptureToggle />
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <ScanCorrectionsExport />
               </div>
             </div>
           </div>

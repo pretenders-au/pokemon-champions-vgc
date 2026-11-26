@@ -12,6 +12,8 @@ import { formFamilyIds, buildLegalIdsResolver } from './battleRoster';
 import { seedRoster, opponentIdsFromEntries, updateEntryId, type ScanEntry } from './roster';
 import CropStep from './CropStep';
 import ScanConfirmView, { SCAN_CONFIRM_MAX_SLOTS } from './ScanConfirmView';
+import ScanCorrectionsExport from './ScanCorrectionsExport';
+import { recordCorrections } from './corrections';
 
 /**
  * Which screen opened the modal, and what it will do with the result. Two hosts exist:
@@ -133,6 +135,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
     const names = rosterNames();
     if (names.length === 0 || !imp) return;
     imp.onImport(toParsedSets(names));
+    void recordCorrections(visibleEntries);
     handleClose();
   };
 
@@ -148,6 +151,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
     const ids = confirmRosterIds();
     if (ids.length === 0 || !calc) return;
     calc.onConfirmRoster(ids);
+    void recordCorrections(visibleEntries);
     handleClose();
   };
 
@@ -188,6 +192,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, pokemonL
               </button>
             </div>
             <p className="text-sm text-ink-3">Tip: hold the phone parallel to the screen and avoid glare.</p>
+            <ScanCorrectionsExport />
           </div>
         )}
 

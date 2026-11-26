@@ -80,5 +80,8 @@ training/.player-crop-preview/
 training/player-fixtures/
 training/panel-crops/
 
+# scan corrections staged for review (npx tsx scripts/import-scan-corrections.ts <export.json>)
+training/corrections-inbox/
+
 # Local ML checkpoints
 training/*.pt

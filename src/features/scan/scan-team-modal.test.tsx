@@ -12,8 +12,10 @@ vi.mock('./useTeamScan', () => ({
   useTeamScan: () => ({ status: 'done', slots, mode, error: null, scan: vi.fn(), reset: vi.fn() }),
   DEFAULT_DEPS: {},
 }));
+vi.mock('./corrections', () => ({ recordCorrections: vi.fn(async () => {}) }));
 
 import ScanTeamModal, { type ScanHost } from './ScanTeamModal';
+import { recordCorrections } from './corrections';
 
 const pokemonList = [
   { id: 1, nameEn: 'Incineroar' }, { id: 2, nameEn: 'Rillaboom' }, { id: 3, nameEn: 'Amoonguss' },
@@ -113,5 +115,33 @@ describe('ScanTeamModal host modes', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Fix Rillaboom/ }));
     expect(screen.getByRole('button', { name: /set as attacker/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /confirm opponent team/i })).toBeNull();
+  });
+});
+
+describe('ScanTeamModal correction capture', () => {
+  beforeEach(() => { vi.mocked(recordCorrections).mockClear(); });
+  const captured = () => vi.mocked(recordCorrections).mock.calls.map(([entries]) => entries.map((e) => e.id));
+
+  it('confirming a roster hands over exactly the entries the grid showed', () => {
+    // Seven opponent reads plus the player's own card: only the six displayed opponent
+    // slots were reviewed, so only those may become training labels.
+    slots = [...[1, 2, 3, 4, 5, 6, 7].map((id) => slot('opponent', [id, 0.9])), slot('player', [8, 0.9])];
+    open(calcHost());
+    fireEvent.click(screen.getByRole('button', { name: /confirm opponent team/i }));
+    expect(captured()).toEqual([[1, 2, 3, 4, 5, 6]]);
+  });
+
+  it('creating a team from a scan hands its entries over too', () => {
+    slots = [slot('opponent', [1, 0.9])];
+    open(importHost());
+    fireEvent.click(screen.getByRole('button', { name: /^create team$/i }));
+    expect(captured()).toEqual([[1]]);
+  });
+
+  it('saving the opponent team captures nothing — the roster can still change after it', () => {
+    slots = [slot('opponent', [1, 0.9])];
+    open(calcHost());
+    fireEvent.click(screen.getByRole('button', { name: /save opp team/i }));
+    expect(recordCorrections).not.toHaveBeenCalled();
   });
 });

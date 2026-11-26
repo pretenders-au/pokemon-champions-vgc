@@ -114,6 +114,20 @@ describe('seedRoster', () => {
     const entries = seedRoster([slot('opponent', [1, 0.9]), slot('opponent', [1, 0.8])]);
     expect(entries.map((e) => e.id)).toEqual([1, null]);
   });
+
+  it('keeps the scanned crop and the seeded id on the entry, through a later re-pick', () => {
+    const crop = { data: new Uint8ClampedArray(4), width: 1, height: 1 };
+    const withCrop = (s: object) => ({ ...s, crop }) as never;
+    const entries = seedRoster([
+      withCrop(slot('opponent', [1, 0.9])),
+      withCrop(slot('opponent', [1, 0.8])),
+      slot('opponent', [2, 0.9]),
+    ]);
+    expect(entries[0].scanned).toEqual({ crop, id: 1 });
+    expect(entries[1].scanned).toEqual({ crop, id: null });
+    expect(entries[2].scanned).toBeUndefined();
+    expect(updateEntryId(entries, 1, 3)[1]).toMatchObject({ id: 3, scanned: { crop, id: null } });
+  });
 });
 
 describe('manual uniqueness is per side', () => {
