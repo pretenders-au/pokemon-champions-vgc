@@ -69,6 +69,48 @@ describe('ScanCorrectionsExport', () => {
     expect(click).not.toHaveBeenCalled();
   });
 
+  it('tells the user when the Android share fails', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
+    vi.mocked(ScreenCapture.shareFile).mockRejectedValueOnce(new Error('could not write the file'));
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not export the scan corrections: could not write the file'));
+  });
+
+  it('tells the user when the iOS share fails, but not when they only dismissed the sheet', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const share = vi.fn<(data: ShareData) => Promise<void>>()
+      .mockRejectedValueOnce(Object.assign(new Error('Abort due to cancellation of share.'), { name: 'AbortError' }))
+      .mockRejectedValueOnce(Object.assign(new Error('not allowed'), { name: 'NotAllowedError' }));
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    const button = await screen.findByRole('button', { name: /export/i });
+    fireEvent.click(button);
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    fireEvent.click(button);
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(alert.mock.calls).toEqual([['Could not export the scan corrections: not allowed']]);
+  });
+
+  it('tells the user when the iOS WebView has no share sheet to offer', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.stringMatching(/^Could not export the scan corrections: /)));
+  });
+
+  it('counts again when the app comes back into view, since the overlay saves corrections from another WebView', async () => {
+    vi.mocked(countSamples).mockResolvedValue(0);
+    render(<ScanCorrectionsExport />);
+    await waitFor(() => expect(countSamples).toHaveBeenCalled());
+    vi.mocked(countSamples).mockResolvedValue(1);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(await screen.findByText('1 scan correction saved on this device')).toBeTruthy();
+  });
+
   it('counts a single sample in the singular', async () => {
     vi.mocked(countSamples).mockResolvedValue(1);
     render(<ScanCorrectionsExport />);
