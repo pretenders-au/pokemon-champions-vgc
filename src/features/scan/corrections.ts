@@ -9,7 +9,7 @@ import type { ScanEntry } from './roster';
 import { rgbaToPngBase64 } from './imageLoading';
 import { putSamples } from './correctionStore';
 
-export interface Correction { crop: RgbaImage; id: number }
+export interface Correction { crop: RgbaImage; id: number; predicted: number | null }
 
 /**
  * The scanned slots the user re-labelled, judged on the roster being confirmed — not per
@@ -22,7 +22,7 @@ export interface Correction { crop: RgbaImage; id: number }
 export function correctionsFromEntries(entries: ScanEntry[]): Correction[] {
   return entries.flatMap((entry) =>
     entry.scanned && entry.id != null && entry.id !== entry.scanned.id && entry.side !== 'player'
-      ? [{ crop: entry.scanned.crop, id: entry.id }]
+      ? [{ crop: entry.scanned.crop, id: entry.id, predicted: entry.scanned.id }]
       : [],
   );
 }
@@ -54,7 +54,7 @@ export async function recordCorrections(entries: ScanEntry[]): Promise<void> {
   const found = correctionsFromEntries(entries);
   if (found.length === 0) return;
   try {
-    await putSamples(found.map(({ crop, id }) => ({ key: cropKey(crop), id, png: rgbaToPngBase64(crop) })));
+    await putSamples(found.map(({ crop, id, predicted }) => ({ key: cropKey(crop), id, predicted, png: rgbaToPngBase64(crop) })));
   } catch (err) {
     console.warn('[scan] could not save scan corrections', err);
   }

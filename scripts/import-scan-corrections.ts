@@ -5,8 +5,9 @@
  *
  * CLI: npx tsx scripts/import-scan-corrections.ts <scan-corrections-YYYY-MM-DD.json>
  *
- * Writes each crop to training/corrections-inbox/<id>_user_Xnip-correction_<key>.png plus an
- * index.html that shows every staged crop beside the species it was labelled as. Nothing
+ * Writes each crop to training/corrections-inbox/<id>_user_Xnip-correction_was<scanned>_<key>.png
+ * plus an index.html that shows every staged crop beside the species it was labelled as and
+ * the one the scan showed (<scanned>: its id, or "none" when the scan read nothing). Nothing
  * here touches training/menu-sprites: a correction is only what a user picked, and every
  * file in menu-sprites becomes both a classifier sample and a descriptor reference. Look
  * at the sheet, delete the wrong ones, then move the rest over by hand.
@@ -39,18 +40,20 @@ export interface ImportResult {
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const idOf = (file: string) => Number(file.split('_')[0]);
+const scannedAs = (file: string) => /_was(\d+)_/.exec(file)?.[1];
 
 export function importCorrections(data: CorrectionsExport, opts: ImportOptions): ImportResult {
   if (data.version !== 1) throw new Error(`Unsupported export version: ${data.version}`);
   fs.mkdirSync(opts.inboxDir, { recursive: true });
 
   const result: ImportResult = { staged: [], rejected: [] };
-  for (const { key, id, png } of data.samples) {
+  for (const { key, id, predicted, png } of data.samples) {
     const reject = (reason: string) => { result.rejected.push({ key, id, reason }); };
     const identifier = opts.identifierOf(id);
     const bytes = Buffer.from(typeof png === 'string' ? png : '', 'base64');
     // One crop, one file: the key alone identifies it, whatever id it was filed under.
-    const sameCrop = (dir: string) => fs.readdirSync(dir).filter((f) => f.endsWith(`_Xnip-correction_${key}.png`));
+    const sameCrop = (dir: string) =>
+      fs.readdirSync(dir).filter((f) => f.includes('_Xnip-correction_') && f.endsWith(`_${key}.png`));
 
     if (!identifier) reject('unknown pokemon id');
     // Team preview shows the base form, so a Mega label on a team-preview crop is a pick
@@ -62,7 +65,8 @@ export function importCorrections(data: CorrectionsExport, opts: ImportOptions):
     else {
       // A newer export may carry a newer label for a crop that is still waiting here.
       for (const stale of sameCrop(opts.inboxDir)) fs.rmSync(path.join(opts.inboxDir, stale));
-      const name = `${id}_user_Xnip-correction_${key}.png`;
+      const was = /^\d+$/.test(String(predicted)) ? predicted : 'none';
+      const name = `${id}_user_Xnip-correction_was${was}_${key}.png`;
       fs.writeFileSync(path.join(opts.inboxDir, name), bytes);
       result.staged.push(name);
     }
@@ -71,16 +75,21 @@ export function importCorrections(data: CorrectionsExport, opts: ImportOptions):
   // The sheet lists the whole inbox, not just this run, so it always matches the folder.
   const files = fs.readdirSync(opts.inboxDir).filter((f) => f.endsWith('.png')).sort((a, b) => idOf(a) - idOf(b));
   const thumbs = path.relative(opts.inboxDir, opts.thumbsDir);
-  const rows = files.map((file) => `<tr>
-  <td><img src="${file}" width="96"></td>
-  <td><img src="${thumbs}/${idOf(file)}.png" width="96"></td>
-  <td>${idOf(file)} ${opts.identifierOf(idOf(file)) ?? ''}<br><small>${file}</small></td>
-</tr>`);
+  const species = (id: string | number) => `<img src="${thumbs}/${id}.png" width="96"><br>${id} ${opts.identifierOf(Number(id)) ?? ''}`;
+  const rows = files.map((file) => {
+    const was = scannedAs(file);
+    return `<tr>
+  <td><img src="${file}" width="96"><br><small>${file}</small></td>
+  <td>${species(idOf(file))}</td>
+  <td>${was ? species(was) : 'nothing'}</td>
+</tr>`;
+  });
   fs.writeFileSync(
     path.join(opts.inboxDir, 'index.html'),
     `<!doctype html><meta charset="utf-8"><title>Scan corrections to review</title>
-<p>Left: the scanned crop. Right: the species it was labelled as. Delete the files where they do not match.</p>
-<table cellpadding="6">\n${rows.join('\n')}\n</table>\n`,
+<p>Delete the files whose crop is not the species the user picked.</p>
+<table cellpadding="6">
+<tr><th>Scanned crop</th><th>User picked</th><th>Scan showed</th></tr>\n${rows.join('\n')}\n</table>\n`,
   );
   return result;
 }

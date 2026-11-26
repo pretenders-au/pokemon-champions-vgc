@@ -24,7 +24,7 @@ describe('correctionsFromEntries', () => {
       scanned(null, 1),              // cleared
       { id: 9, candidates: [] },     // added by hand: no crop behind it
     ]);
-    expect(found).toEqual([{ crop, id: 2 }, { crop, id: 5 }]);
+    expect(found).toEqual([{ crop, id: 2, predicted: 1 }, { crop, id: 5, predicted: null }]);
   });
 
   it('ignores the player side — a leaked own card re-picked to finish the opponent roster is not a label', () => {
@@ -45,9 +45,9 @@ describe('cropKey', () => {
 describe('recordCorrections', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('stores each re-labelled crop as a PNG under its content key', async () => {
+  it('stores each re-labelled crop as a PNG under its content key, with what the scan showed', async () => {
     await recordCorrections([scanned(2, 1), scanned(1, 1)]);
-    expect(putSamples).toHaveBeenCalledWith([{ key: cropKey(crop), id: 2, png: 'PNG' }]);
+    expect(putSamples).toHaveBeenCalledWith([{ key: cropKey(crop), id: 2, predicted: 1, png: 'PNG' }]);
   });
 
   it('does nothing when no slot was re-labelled', async () => {

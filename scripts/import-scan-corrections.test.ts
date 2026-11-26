@@ -31,9 +31,9 @@ function dirs() {
 describe('importCorrections', () => {
   it('stages an app-exported crop, pixel for pixel, under a name the training scripts read as its id', () => {
     const opts = dirs();
-    const { staged, rejected } = importCorrections({ version: 1, samples: [{ key: key(0xab12), id: 25, png }] }, opts);
+    const { staged, rejected } = importCorrections({ version: 1, samples: [{ key: key(0xab12), id: 25, predicted: 26, png }] }, opts);
     expect(rejected).toEqual([]);
-    expect(staged).toEqual(['25_user_Xnip-correction_000000000000ab12.png']);
+    expect(staged).toEqual(['25_user_Xnip-correction_was26_000000000000ab12.png']);
 
     // The two rules every consumer of training/menu-sprites applies to a filename.
     expect(staged[0].split('_')[0]).toBe('25');   // class id = text before the first underscore
@@ -44,24 +44,26 @@ describe('importCorrections', () => {
     const rgb = (img: RgbaImage) => Array.from(img.data).filter((_, i) => i % 4 !== 3);
     expect(rgb(back)).toEqual(rgb(crop));
 
+    // The sheet shows the crop, the species the user picked and the one the scan showed.
     const sheet = fs.readFileSync(path.join(opts.inboxDir, 'index.html'), 'utf8');
     expect(sheet).toContain(staged[0]);
-    expect(sheet).toContain('pikachu');
+    expect(sheet).toContain('25 pikachu');
+    expect(sheet).toContain('26 raichu');
   });
 
   it('rejects what must not become training data, and says why', () => {
     const opts = dirs();
-    fs.writeFileSync(path.join(opts.acceptedDir, `26_user_Xnip-correction_${key(6)}.png`), '');
+    fs.writeFileSync(path.join(opts.acceptedDir, `26_user_Xnip-correction_wasnone_${key(6)}.png`), '');
     const { staged, rejected } = importCorrections({
       version: 1,
       samples: [
-        { key: key(1), id: 99999, png },         // not a Pokemon
-        { key: key(2), id: 10034, png },         // a Mega never appears in team preview
-        { key: key(3), id: 10256, png },         // nor does Palafin's Hero form
-        { key: '../../etc/passwd', id: 25, png }, // key becomes part of a path
-        { key: key(5), id: 25, png: 'aGVsbG8=' }, // not a PNG
-        { key: key(7), id: 25, png: null },      // a hand-edited file
-        { key: key(6), id: 25, png },            // this crop is already in training, as Raichu
+        { key: key(1), id: 99999, predicted: null, png },         // not a Pokemon
+        { key: key(2), id: 10034, predicted: null, png },         // a Mega never appears in team preview
+        { key: key(3), id: 10256, predicted: null, png },         // nor does Palafin's Hero form
+        { key: '../../etc/passwd', id: 25, predicted: null, png }, // key becomes part of a path
+        { key: key(5), id: 25, predicted: null, png: 'aGVsbG8=' }, // not a PNG
+        { key: key(7), id: 25, predicted: null, png: null },      // a hand-edited file
+        { key: key(6), id: 25, predicted: null, png },            // this crop is already in training, as Raichu
       ],
     } as never, opts);
     expect(staged).toEqual([]);
@@ -72,10 +74,17 @@ describe('importCorrections', () => {
 
   it('keeps one file per crop — a later export with a new label replaces the staged one', () => {
     const opts = dirs();
-    importCorrections({ version: 1, samples: [{ key: key(1), id: 25, png }] }, opts);
-    const { staged } = importCorrections({ version: 1, samples: [{ key: key(1), id: 26, png }] }, opts);
-    expect(staged).toEqual([`26_user_Xnip-correction_${key(1)}.png`]);
+    importCorrections({ version: 1, samples: [{ key: key(1), id: 25, predicted: 26, png }] }, opts);
+    const { staged } = importCorrections({ version: 1, samples: [{ key: key(1), id: 26, predicted: null, png }] }, opts);
+    expect(staged).toEqual([`26_user_Xnip-correction_wasnone_${key(1)}.png`]);
     expect(fs.readdirSync(opts.inboxDir).filter((f) => f.endsWith('.png'))).toEqual(staged);
+    expect(fs.readFileSync(path.join(opts.inboxDir, 'index.html'), 'utf8')).toContain('nothing');
+  });
+
+  it('never lets what the scan showed into a path unless it is a whole number', () => {
+    const opts = dirs();
+    const { staged } = importCorrections({ version: 1, samples: [{ key: key(1), id: 25, predicted: '../x', png }] } as never, opts);
+    expect(staged).toEqual([`25_user_Xnip-correction_wasnone_${key(1)}.png`]);
   });
 
   it('refuses an export it does not understand', () => {

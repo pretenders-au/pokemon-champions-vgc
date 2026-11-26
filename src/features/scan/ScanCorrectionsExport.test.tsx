@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
 
-vi.mock('./correctionStore', () => ({ countSamples: vi.fn(), listSamples: vi.fn(), clearSamples: vi.fn() }));
+vi.mock('./correctionStore', () => ({ MAX_SAMPLES: 200, countSamples: vi.fn(), listSamples: vi.fn(), clearSamples: vi.fn() }));
 
 import ScanCorrectionsExport from './ScanCorrectionsExport';
 import { countSamples, listSamples, clearSamples } from './correctionStore';
 
-const samples = [{ key: 'aa', id: 25, png: 'UE5H' }, { key: 'bb', id: 6, png: 'UE5H' }];
+const samples = [{ key: 'aa', id: 25, predicted: 26, png: 'UE5H' }, { key: 'bb', id: 6, predicted: null, png: 'UE5H' }];
 const readText = (blob: Blob) =>
   new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -49,6 +49,12 @@ describe('ScanCorrectionsExport', () => {
     vi.mocked(countSamples).mockResolvedValue(1);
     render(<ScanCorrectionsExport />);
     expect(await screen.findByText('1 scan correction saved on this device')).toBeTruthy();
+  });
+
+  it('says when the store is full, since further corrections are dropped until it is cleared', async () => {
+    vi.mocked(countSamples).mockResolvedValue(200);
+    render(<ScanCorrectionsExport />);
+    expect(await screen.findByText(/200 scan corrections saved on this device \(full: export, then clear/)).toBeTruthy();
   });
 
   it('exports every saved sample as one JSON download', async () => {

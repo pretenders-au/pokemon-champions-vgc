@@ -160,6 +160,16 @@ A team-preview scan reports **both** sides. Only the opponent's is persisted —
 fewer than six opponent cards were detected leaves player slots among the first six, so the
 side filter lives in `opponentIdsFromEntries` rather than in each caller.
 
+### Scan correction
+
+A slot the user re-picked before confirming a team-preview **Opponent scan**, kept as a
+training sample for the sprite classifier: the crop that was read, the species the user chose
+and the one the scan showed. Saved on the device, exported by hand, and reviewed before it
+joins `training/menu-sprites` — a re-pick is only what a user tapped.
+
+Not the **Corrections** of **Set resolution**, which are lookups that matched inexactly. In
+code the scan kind lives in `features/scan/corrections.ts`.
+
 ## Presentation
 
 ### Viewport mode

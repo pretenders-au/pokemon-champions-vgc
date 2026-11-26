@@ -11,6 +11,8 @@ export interface CorrectionSample {
   key: string;
   /** The species the user picked. */
   id: number;
+  /** What the scan showed for this slot before the user changed it; null when it showed nothing. */
+  predicted: number | null;
   /** The crop as base64 PNG. */
   png: string;
 }

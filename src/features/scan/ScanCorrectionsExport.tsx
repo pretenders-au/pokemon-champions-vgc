@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '@/design-system/arena';
-import { clearSamples, countSamples, listSamples, type CorrectionsExport } from './correctionStore';
+import { clearSamples, countSamples, listSamples, MAX_SAMPLES, type CorrectionsExport } from './correctionStore';
 
 /**
  * "N scan corrections saved on this device · Export · Clear" — hands the samples that
@@ -37,7 +37,7 @@ const ScanCorrectionsExport: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--ink-3)' }}>
-      <span>{saved}</span>
+      <span>{saved}{count >= MAX_SAMPLES && ' (full: export, then clear, to save more)'}</span>
       <Button variant="secondary" size="sm" onClick={exportAll}>Export</Button>
       <Button variant="ghost" size="sm" onClick={clearAll}>Clear</Button>
     </div>
