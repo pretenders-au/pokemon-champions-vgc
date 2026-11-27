@@ -102,6 +102,14 @@ describe('ScanCorrectionsExport', () => {
     await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.stringMatching(/^Could not export the scan corrections: /)));
   });
 
+  it('tells the user when the saved samples cannot be read', async () => {
+    vi.mocked(listSamples).mockRejectedValueOnce(new Error('db gone'));
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not export the scan corrections: db gone'));
+  });
+
   it('counts again when the app comes back into view, since the overlay saves corrections from another WebView', async () => {
     vi.mocked(countSamples).mockResolvedValue(0);
     render(<ScanCorrectionsExport />);
