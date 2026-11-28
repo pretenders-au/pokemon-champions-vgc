@@ -9,6 +9,8 @@ export interface ScreenCapturePlugin {
   stopSession(): Promise<void>;
   capture(): Promise<{ pngBase64: string; width: number; height: number }>;
   bringToFront(): Promise<void>;
+  /** Writes `text` to a cache file called `name` and opens the share sheet for it. */
+  shareFile(options: { name: string; text: string }): Promise<void>;
   addListener(eventName: 'overlayTap', cb: () => void): Promise<{ remove: () => Promise<void> }>;
 }
 

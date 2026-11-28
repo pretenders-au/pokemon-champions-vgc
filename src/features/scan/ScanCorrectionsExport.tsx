@@ -2,31 +2,57 @@ import React, { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '@/design-system/arena';
 import { clearSamples, countSamples, listSamples, MAX_SAMPLES, type CorrectionsExport } from './correctionStore';
+import { ScreenCapture } from './mediaProjectionSource';
 
 /**
  * "N scan corrections saved on this device · Export · Clear" — hands the samples that
  * recordCorrections saved to scripts/import-scan-corrections.ts as one JSON file.
  *
- * Renders nothing until there is something to export, and nothing in the native shells:
- * their WebViews have no handler for a file download.
+ * Renders nothing until there is something to export. A browser downloads the file; the
+ * native shells open the share sheet instead, because their WebViews have no handler for a
+ * file download.
  */
 const ScanCorrectionsExport: React.FC = () => {
   const [count, setCount] = useState(0);
   const refresh = () => { countSamples().then(setCount, () => setCount(0)); };
-  useEffect(refresh, []);
+  useEffect(() => {
+    refresh();
+    // The Android overlay is a second WebView: it saves corrections while this screen stays mounted.
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
-  if (count === 0 || Capacitor.isNativePlatform()) return null;
+  if (count === 0) return null;
   const saved = `${count} scan correction${count === 1 ? '' : 's'} saved on this device`;
 
   const exportAll = async () => {
-    const data: CorrectionsExport = { version: 1, samples: await listSamples() };
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `scan-corrections-${new Date().toLocaleDateString('en-CA')}.json`; // en-CA: local YYYY-MM-DD
-    link.click();
-    // Not straight away: some browsers start reading the blob only after the click returns.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    try {
+      const data: CorrectionsExport = { version: 1, samples: await listSamples() };
+      const json = JSON.stringify(data);
+      const name = `scan-corrections-${new Date().toLocaleDateString('en-CA')}.json`; // en-CA: local YYYY-MM-DD
+      const platform = Capacitor.getPlatform();
+      if (platform === 'android') {
+        await ScreenCapture.shareFile({ name, text: json });
+        return;
+      }
+      if (platform === 'ios') {
+        // WKWebView shares a File by itself, so iOS needs no plugin.
+        await navigator.share({ files: [new File([json], name, { type: 'application/json' })] });
+        return;
+      }
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      link.click();
+      // Not straight away: some browsers start reading the blob only after the click returns.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      // AbortError: the share sheet was dismissed, which is not a failure.
+      if ((error as { name?: string } | null)?.name === 'AbortError') return;
+      window.alert(`Could not export the scan corrections: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   const clearAll = async () => {

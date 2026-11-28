@@ -4,9 +4,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
 
 vi.mock('./correctionStore', () => ({ MAX_SAMPLES: 200, countSamples: vi.fn(), listSamples: vi.fn(), clearSamples: vi.fn() }));
+vi.mock('./mediaProjectionSource', () => ({ ScreenCapture: { shareFile: vi.fn(async () => {}) } }));
 
 import ScanCorrectionsExport from './ScanCorrectionsExport';
 import { countSamples, listSamples, clearSamples } from './correctionStore';
+import { ScreenCapture } from './mediaProjectionSource';
 
 const samples = [{ key: 'aa', id: 25, predicted: 26, png: 'UE5H' }, { key: 'bb', id: 6, predicted: null, png: 'UE5H' }];
 const readText = (blob: Blob) =>
@@ -21,7 +23,10 @@ beforeEach(() => {
   vi.mocked(listSamples).mockResolvedValue(samples);
   vi.mocked(clearSamples).mockResolvedValue(undefined);
 });
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete (navigator as { share?: unknown }).share;
+});
 
 describe('ScanCorrectionsExport', () => {
   it('shows nothing while there is nothing to export', async () => {
@@ -38,11 +43,80 @@ describe('ScanCorrectionsExport', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('shows nothing in the native shells, where a download has nowhere to go', async () => {
-    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
-    const { container } = render(<ScanCorrectionsExport />);
+  it('shares the export through the ScreenCapture plugin on Android, where a download has nowhere to go', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(ScreenCapture.shareFile).toHaveBeenCalled());
+    const [{ name, text }] = vi.mocked(ScreenCapture.shareFile).mock.lastCall!;
+    expect(name).toMatch(/^scan-corrections-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(JSON.parse(text)).toEqual({ version: 1, samples });
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('shares the export as a file through the share sheet on iOS', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const share = vi.fn(async (_data: ShareData) => {});
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const [file] = share.mock.lastCall![0].files!;
+    expect(file.name).toMatch(/^scan-corrections-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(JSON.parse(await readText(file))).toEqual({ version: 1, samples });
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it('tells the user when the Android share fails', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
+    vi.mocked(ScreenCapture.shareFile).mockRejectedValueOnce(new Error('could not write the file'));
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not export the scan corrections: could not write the file'));
+  });
+
+  it('tells the user when the iOS share fails, but not when they only dismissed the sheet', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const share = vi.fn<(data: ShareData) => Promise<void>>()
+      .mockRejectedValueOnce(Object.assign(new Error('Abort due to cancellation of share.'), { name: 'AbortError' }))
+      .mockRejectedValueOnce(Object.assign(new Error('not allowed'), { name: 'NotAllowedError' }));
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    const button = await screen.findByRole('button', { name: /export/i });
+    fireEvent.click(button);
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    fireEvent.click(button);
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(alert.mock.calls).toEqual([['Could not export the scan corrections: not allowed']]);
+  });
+
+  it('tells the user when the iOS WebView has no share sheet to offer', async () => {
+    vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('ios');
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith(expect.stringMatching(/^Could not export the scan corrections: /)));
+  });
+
+  it('tells the user when the saved samples cannot be read', async () => {
+    vi.mocked(listSamples).mockRejectedValueOnce(new Error('db gone'));
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<ScanCorrectionsExport />);
+    fireEvent.click(await screen.findByRole('button', { name: /export/i }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not export the scan corrections: db gone'));
+  });
+
+  it('counts again when the app comes back into view, since the overlay saves corrections from another WebView', async () => {
+    vi.mocked(countSamples).mockResolvedValue(0);
+    render(<ScanCorrectionsExport />);
     await waitFor(() => expect(countSamples).toHaveBeenCalled());
-    expect(container.textContent).toBe('');
+    vi.mocked(countSamples).mockResolvedValue(1);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(await screen.findByText('1 scan correction saved on this device')).toBeTruthy();
   });
 
   it('counts a single sample in the singular', async () => {

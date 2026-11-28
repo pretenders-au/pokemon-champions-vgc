@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+
+vi.mock('@/features/scan/corrections', () => ({ recordCorrections: vi.fn(async () => {}) }));
+
 import ConfirmRosterView from './ConfirmRosterView';
+import { recordCorrections } from '@/features/scan/corrections';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
 
@@ -58,6 +62,24 @@ describe('ConfirmRosterView', () => {
     fireEvent.click(screen.getByRole('button', { name: /Use Dragonite/ }));
     fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
     expect(onConfirm).toHaveBeenCalledWith([149]);
+  });
+
+  it('hands the confirmed roster to recordCorrections, re-pick and crop included', () => {
+    const crop = { data: new Uint8ClampedArray(4), width: 1, height: 1 };
+    render(
+      <ConfirmRosterView
+        slots={[{ ...slot([{ id: 445, score: 0.61 }, { id: 149, score: 0.26 }]), crop }]}
+        pokemonList={list}
+        onConfirm={() => {}}
+        onRescan={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Fix Garchomp/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Use Dragonite/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
+    const [entries] = vi.mocked(recordCorrections).mock.lastCall!;
+    expect(entries.map((e) => [e.id, e.scanned])).toEqual([[149, { crop, id: 445 }]]);
   });
 
   it('typing replaces top candidates with live dex matches; tapping one picks it', () => {
